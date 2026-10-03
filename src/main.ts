@@ -8,7 +8,8 @@ import './style.css';
 
 import { h, btn, sfx, toggleMute, sleep, reduced } from './ui';
 import { state, complete, begin, reset } from './state';
-import { drawIdentity, identityLayers, playerNumber, paint, portraitGrid, PALS } from './identity';
+import { drawIdentity, identityLayers, playerNumber, paint, portraitGrid, PALS, castPortrait } from './identity';
+import { icon, confetti, LEVEL_ICONS } from './icons';
 import { LESSONS } from './lessons';
 import { runLesson } from './lesson';
 import { darkPool } from './game';
@@ -56,44 +57,73 @@ function route() {
 }
 window.addEventListener('hashchange', route);
 
+const MINS = ['1 min', '2 min', '1 min', '2 min', '1 min', '1 min', '5 min'];
+
 function titleScreen() {
   const next = LESSONS.find((l) => !state.done.includes(l.n));
   const started = state.done.length > 0;
-  const idCv = h('canvas', { class: 'hero-id' }) as HTMLCanvasElement;
-  const caption = h('span', {}, '');
-  if (started) { drawIdentity(idCv, identityLayers(), 10); caption.textContent = `Your identity: ${identityLayers()}/8 pieces`; }
+  const youCv = h('canvas', { class: 'portrait' }) as HTMLCanvasElement;
+  if (started) drawIdentity(youCv, identityLayers(), 10, '#0b1410');
   const cta = next
     ? h('a', { class: 'btn primary big', href: `#/level/${next.n}`, onclick: () => sfx.pop() }, started ? `Continue: level ${next.n} →` : 'Start learning →')
     : h('a', { class: 'btn primary big', href: '#/card' }, 'See my identity card →');
+  const fanCard = (art: HTMLElement, name: string, role: string, cls: string) => h('figure', { class: `fan-card ${cls}` }, h('div', { class: 'fan-art' }, art), h('figcaption', {}, h('b', {}, name), h('span', {}, role)));
   const hero = h('section', { class: 'hero' },
     h('div', { class: 'hero-copy' },
+      h('div', { class: 'kicker' }, 'A Zcash learning game'),
       h('div', { class: 'wordmark' }, pixelText('GLASSTOWN', 8)),
       h('h1', {}, 'Learn to use Zcash privately, in about 10 minutes.'),
-      h('p', { class: 'sub' }, `${TOTAL} short levels. No experience needed. At the end you make your first private payment.`),
-      h('div', { class: 'row-actions' }, cta, h('a', { class: 'btn ghost', href: '#/game' }, 'Just play the game'))),
-    h('div', { class: 'hero-art' }, h('div', { class: 'hero-frame' }, idCv, caption)));
-  const levels = h('section', { class: 'levels' }, h('h2', {}, 'Levels'),
-    h('ol', { class: 'level-list' }, ...LESSONS.map((l) => h('li', {}, h('a', { class: `level ${state.done.includes(l.n) ? 'done' : ''}`, href: `#/level/${l.n}` },
-      h('span', { class: 'level-n' }, state.done.includes(l.n) ? '✓' : String(l.n)),
-      h('span', { class: 'level-text' }, h('b', {}, l.title), h('small', {}, l.blurb)),
-      h('span', { class: 'level-go' }, state.done.includes(l.n) ? 'Replay' : 'Start'))))));
-  const promise = h('section', { class: 'promise' },
-    h('div', {}, h('b', {}, 'Public'), h('p', {}, 'Like glass: anyone can see your balance and payments.')),
-    h('div', {}, h('b', { class: 'hl' }, 'Private (shielded)'), h('p', {}, 'Only you can see them. That’s what you’ll learn here.')));
-  main.replaceChildren(hero, promise, levels);
-  if (!started) heroShuffle(idCv, caption);
+      h('p', { class: 'sub' }, `${TOTAL} short levels and one arcade game. No experience needed. At the end you make your first private payment.`),
+      h('div', { class: 'row-actions' }, cta, h('a', { class: 'btn ghost', href: '#/game' }, icon('play', 14), 'Play the game')),
+      h('ul', { class: 'trust' }, ...['Free', 'No sign-up', 'Never asks for your 24 words'].map((t) => h('li', {}, icon('check', 14), t)))),
+    h('div', { class: 'hero-art' }, h('div', { class: 'fan' },
+      fanCard(castPortrait('peep', 'peer', 8), 'WATCHER', 'sees public wallets', 'c1'),
+      fanCard(castPortrait('zee', 'wave', 8), 'ZERO', 'your guide', 'c2'),
+      fanCard(youCv, 'YOU', started ? `${identityLayers()}/8 unlocked` : 'unlocks as you learn', 'c3'))));
+  const how = h('section', { class: 'how' }, ...([
+    ['eye', 'Learn the idea', 'Short cards with one idea each. Tap, choose, continue.'],
+    ['play', 'Play Dark Pool', 'An arcade game where you hide coins from the Watcher.'],
+    ['star', 'Do it for real', 'Make one real private payment with your own wallet.'],
+  ] as const).map(([ic, t, d], i) => h('div', { class: 'how-card' }, h('span', { class: 'how-icon' }, icon(ic, 22)), h('span', { class: 'how-n' }, `Step ${i + 1}`), h('b', {}, t), h('p', {}, d))));
+  const idea = h('section', { class: 'idea' },
+    h('div', { class: 'idea-copy' }, h('div', { class: 'kicker' }, 'The one idea'), h('h2', {}, 'Most crypto is public. Zcash can make it private.'),
+      h('p', { class: 'sub' }, 'A public wallet is like glass: anyone can see your balance and every payment. A private (shielded) wallet shows nothing.')),
+    h('div', { class: 'idea-cards' },
+      h('div', { class: 'wallet glass' }, h('div', { class: 'wallet-head' }, 'PUBLIC · anyone can look'), ...[['Balance', '3.20 ZEC'], ['Paid', 'Bean There Café'], ['From', 'ACME Corp salary']].map(([k, v]) => h('div', { class: 'wallet-row' }, h('span', {}, k), h('b', {}, v)))),
+      h('div', { class: 'wallet dark' }, h('div', { class: 'wallet-head' }, 'PRIVATE · only you can look'), ...['Balance', 'Paid', 'From'].map((k) => h('div', { class: 'wallet-row' }, h('span', {}, k), h('b', {}, '████████'))))));
+  const current = next?.n ?? 0;
+  const path = h('section', { class: 'path' }, h('div', { class: 'kicker' }, 'Your path'), h('h2', {}, `${TOTAL} levels, about 10 minutes`),
+    h('ol', { class: 'path-list' }, ...LESSONS.map((l) => {
+      const done = state.done.includes(l.n), cur = l.n === current;
+      return h('li', { class: `node ${done ? 'done' : ''} ${cur ? 'current' : ''}` }, h('a', { href: `#/level/${l.n}` },
+        h('span', { class: 'node-dot' }, done ? icon('check', 20) : icon(LEVEL_ICONS[l.n - 1], 20)),
+        h('span', { class: 'node-card' },
+          h('span', { class: 'node-meta' }, `Level ${l.n} · ${MINS[l.n - 1]}${l.n === 4 ? ' · game' : ''}`),
+          h('b', {}, l.title), h('small', {}, l.blurb)),
+        h('span', { class: 'node-go' }, done ? 'Replay' : cur ? (started ? 'Continue →' : 'Start →') : 'Open')));
+    })));
+  const cast = h('section', { class: 'cast-strip' }, h('div', { class: 'kicker' }, 'Meet the cast'),
+    h('div', { class: 'cast-grid' }, ...([
+      ['zee', 'wave', 'ZERO', 'Your guide. Explains everything in plain words.'],
+      ['peep', 'peer', 'WATCHER', 'Reads every public wallet. Can’t read private ones.'],
+      ['moss', 'key', 'KEEPER', 'Guards your 24 secret words.'],
+      ['gus', 'smile', 'SUPPORT ✓', 'Friendly, verified, a scammer. Never trust him.'],
+    ] as const).map(([w, p, n, d]) => h('div', { class: 'cast-card' }, h('div', { class: 'cast-art' }, castPortrait(w, p, 6)), h('b', {}, n), h('small', {}, d)))));
+  const final = h('section', { class: 'final' }, h('div', {}, h('h2', {}, 'Ready to go private?'), h('p', {}, 'Ten minutes from now you’ll know how to keep your money to yourself.')),
+    next ? h('a', { class: 'btn primary big', href: `#/level/${next.n}` }, started ? 'Continue →' : 'Start level 1 →') : h('a', { class: 'btn primary big', href: '#/card' }, 'My card →'));
+  main.replaceChildren(hero, how, idea, path, cast, final);
+  if (!started) heroShuffle(youCv);
 }
 
-// Before you start, the hero frame flicks through random identities: one of them becomes yours.
-function heroShuffle(cv: HTMLCanvasElement, caption: HTMLElement) {
+// Before you start, "YOU" flicks through random identities: one of them becomes yours.
+function heroShuffle(cv: HTMLCanvasElement) {
   const my = running;
   const heads = ['hood', 'cap', 'beanie', 'hood'] as const, eyes = ['square', 'slit', 'visor'] as const, tex = ['solid', 'dither', 'noise'] as const;
   const cols = ['#5dff8f', '#7cf2ff', '#ffd23f', '#ff5e5e', '#f2f2f2', '#c08bff'];
   const tick = () => {
     if (my !== running || !cv.isConnected) return;
     const r = (k: number) => Math.floor(Math.random() * k);
-    paint(cv, portraitGrid({ head: heads[r(4)], pal: r(PALS.length - 1), eyes: eyes[r(3)], eyeColor: cols[r(6)], halo: Math.random() > 0.4, dissolve: 0.3 + Math.random() * 0.7, earring: Math.random() > 0.6, texture: tex[r(3)] }, String(Math.random()), 'idle', 8), 10);
-    caption.textContent = 'Your private identity unlocks as you learn';
+    paint(cv, portraitGrid({ head: heads[r(4)], pal: r(PALS.length - 1), eyes: eyes[r(3)], eyeColor: cols[r(6)], halo: Math.random() > 0.4, dissolve: 0.3 + Math.random() * 0.7, earring: Math.random() > 0.6, texture: tex[r(3)] }, String(Math.random()), 'idle', 8), 10, '#0b1410');
     setTimeout(tick, reduced() ? 2000 : 700);
   };
   tick();
@@ -124,11 +154,13 @@ async function levelComplete(host: HTMLElement, n: number) {
       h('div', { class: 'kicker' }, `Level ${n} complete`),
       h('h2', {}, 'New piece unlocked: ', h('span', { class: 'hl' }, PIECES[n] ?? 'halo')),
       h('p', {}, `Your private identity is ${layers}/8 complete. Finish every level to unlock it all.`),
+      h('div', { class: 'dots' }, ...LESSONS.map((l) => h('span', { class: state.done.includes(l.n) ? 'on' : '', title: l.title }))),
       h('div', { class: 'row-actions' },
         next ? h('a', { class: 'btn primary big', href: `#/level/${next.n}` }, `Next: ${next.title} →`) : null,
         h('a', { class: 'btn ghost', href: '#/' }, 'All levels')))));
   await sleep(reduced() ? 0 : 600);
   cv.classList.add('flash'); drawIdentity(cv, layers, 8, '#0a120e');
+  confetti(host.querySelector('.done-card') as HTMLElement);
 }
 
 async function gameScreen() {
@@ -140,12 +172,10 @@ async function gameScreen() {
     h('h1', {}, 'Dark Pool'),
     h('p', { class: 'sub' }, 'Pick up coins, then carry them into the dark pool, where they’re private. Coins you carry are public, so the Watcher’s drones can spot you. 45 seconds.'),
     host, result));
-  const play = () => darkPool(host, { seconds: 45, onEnd: (r) => {
+  darkPool(host, { seconds: 45, onEnd: (r) => {
     if (my !== running) return;
-    result.replaceChildren(h('p', {}, `You hid ${r.shielded.toFixed(2)} ZEC. Best: ${r.best.toFixed(2)} ZEC.`),
-      h('div', { class: 'row-actions' }, btn('Play again', () => { host.replaceChildren(); result.replaceChildren(); play(); }, 'primary'), h('a', { class: 'btn ghost', href: '#/level/1' }, 'Learn Zcash →')));
+    result.replaceChildren(h('div', { class: 'row-actions' }, h('a', { class: 'btn primary big', href: '#/level/1' }, 'Now learn Zcash →'), h('span', { class: 'fine' }, `Best: ${r.best.toFixed(2)} ZEC`)));
   } });
-  play();
 }
 
 async function cardScreen() {
@@ -171,6 +201,7 @@ async function cardScreen() {
       h('p', {}, 'Send a friend 0.001 ZEC with the note “learn at ', location.host, '”. The more people pay privately, the more private everyone is.')),
     h('p', { class: 'center' }, h('button', { class: 'linkish', type: 'button', onclick: () => { if (confirm('Start over? This clears your progress.')) { reset(); location.hash = '#/'; } } }, 'Start over'))));
   await drawCard(cv);
+  confetti(main.querySelector('.card-wrap') as HTMLElement, 60);
 }
 
 function sourcesScreen() {

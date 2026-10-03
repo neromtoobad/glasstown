@@ -162,9 +162,7 @@ export const LESSONS: LessonDef[] = [
           const host = h('div', { class: 'game-host' });
           area.append(host);
           darkPool(host, { seconds: 45, onEnd: (r) => {
-            say('peep', r.shielded > 0 ? 'defeated' : 'read', r.shielded > 0 ? `You hid <b>${r.shielded.toFixed(2)} ZEC</b> in the pool. I lost track of all of it.` : 'Nothing made it into the pool, so I could see all of it. Try again.');
-            const again = btn('Play again', () => { host.replaceChildren(); darkPool(host, { seconds: 45, onEnd: () => {} }); });
-            host.append(h('div', { class: 'row-actions' }, again));
+            say('peep', r.shielded > 0 ? 'defeated' : 'read', r.shielded > 0 ? `You hid <b>${r.shielded.toFixed(2)} ZEC</b> in the pool. I lost track of all of it.` : 'Nothing made it into the pool, so I could see all of it. Play again, or continue.');
             done();
           } });
         } },

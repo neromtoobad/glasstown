@@ -1,15 +1,20 @@
 // DARK POOL: a small arcade game about shielding.
-// Grab ZEC in the lit glass district. While you carry it you're transparent, so Watcher drones
-// can see you and trace you. Reach the dark pool to shield what you carry: inside it they lose you.
+// Pick up coins in the bright glass district. Coins you carry are public, so the Watcher's drones
+// can spot you from further away. Carry them into the dark pool to make them private.
+//
+// The world is 320×192 units. The canvas renders at the screen's real resolution (devicePixelRatio),
+// so shapes and text stay sharp at any size. Only pixel art (your identity) is drawn unsmoothed.
 import { sfx } from './ui';
 import { state, save } from './state';
-import { playerTraits, PALS } from './identity';
+import { playerTraits, portraitGrid, paint } from './identity';
 
 const W = 320, H = 192;
 type V = { x: number; y: number };
-type Drone = V & { vx: number; vy: number; tx: number; ty: number; chase: number; lost: number };
+type Drone = V & { tx: number; ty: number; chase: number; lost: number; spin: number };
 type Coin = V & { v: number; t: number };
 type Pop = V & { text: string; t: number; color: string };
+type Spark = V & { vx: number; vy: number; life: number; max: number; color: string; size: number };
+type Ripple = V & { t: number };
 
 export type Result = { shielded: number; doxxed: number; best: number; isBest: boolean };
 
@@ -22,59 +27,115 @@ const WALLS = [
 const inRect = (p: V, r: { x: number; y: number; w: number; h: number }, pad = 0) => p.x > r.x - pad && p.x < r.x + r.w + pad && p.y > r.y - pad && p.y < r.y + r.h + pad;
 const inPool = (p: V) => inRect(p, POOL, -3);
 const blocked = (p: V, rad: number) => p.x < rad || p.y < rad || p.x > W - rad || p.y > H - rad || WALLS.some((w) => inRect(p, w, rad));
+const SANS = 'Inter, system-ui, sans-serif', MONO = '"JetBrains Mono", ui-monospace, monospace';
 
 export function darkPool(host: HTMLElement, opts: { seconds?: number; onEnd: (r: Result) => void }): () => void {
-  const seconds = opts.seconds ?? 60;
+  const seconds = opts.seconds ?? 45;
+  // ---------- DOM ----------
   const wrap = document.createElement('div'); wrap.className = 'game';
   const hud = document.createElement('div'); hud.className = 'game-hud';
-  const cv = document.createElement('canvas'); cv.width = W; cv.height = H; cv.className = 'game-cv'; cv.tabIndex = 0;
-  cv.setAttribute('aria-label', 'Dark Pool game. Move with arrow keys or WASD, or hold and drag on the screen.');
+  const stage = document.createElement('div'); stage.className = 'game-stage';
+  const cv = document.createElement('canvas'); cv.className = 'game-cv'; cv.tabIndex = 0;
+  cv.setAttribute('aria-label', 'Dark Pool game. Move with the arrow keys or WASD, or press and drag.');
+  const overlay = document.createElement('div'); overlay.className = 'game-overlay';
   const help = document.createElement('div'); help.className = 'game-help';
-  help.innerHTML = '<span>Move: arrow keys, or press and drag</span><span>Pick up coins → carry them into the dark pool</span>';
-  wrap.append(hud, cv, help); host.append(wrap);
-  const g = cv.getContext('2d')!; g.imageSmoothingEnabled = false;
+  help.innerHTML = '<span>Move: arrow keys / WASD, or press and drag</span><span>Coins you carry are public · the dark pool makes them private</span>';
+  stage.append(cv, overlay); wrap.append(hud, stage, help); host.append(wrap);
+  const g = cv.getContext('2d')!;
 
-  const traits = playerTraits(); const pal = PALS[traits.pal];
-  const me = { x: POOL.x + POOL.w / 2, y: POOL.y + POOL.h / 2, carry: 0, inv: 0 };
-  let shielded = 0, doxxed = 0, lives = 3, time = seconds, last = 0, running = true, started = false, spawnT = 0;
-  const drones: Drone[] = [];
-  const coins: Coin[] = [];
-  const pops: Pop[] = [];
+  // ---------- crisp sizing ----------
+  let scale = 1;
+  const fit = () => {
+    const r = cv.getBoundingClientRect(); if (!r.width) return;
+    const dpr = Math.min(3, window.devicePixelRatio || 1);
+    cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.width * (H / W) * dpr);
+    scale = cv.width / W;
+  };
+  const ro = new ResizeObserver(fit); ro.observe(cv); fit();
+
+  // ---------- sprites ----------
+  const traits = playerTraits();
+  const meSprite = document.createElement('canvas'); paint(meSprite, portraitGrid(traits, state.seed, 'idle', 8), 1);
+
+  // ---------- round state ----------
+  let me = { x: 0, y: 0, carry: 0, inv: 0, face: 1 };
+  let shielded = 0, doxxed = 0, lives = 3, time = seconds, spawnT = 0, shake = 0, flash = 0;
+  let drones: Drone[] = [], coins: Coin[] = [], pops: Pop[] = [], sparks: Spark[] = [], ripples: Ripple[] = [];
   const trail: V[] = [];
+  let mode: 'ready' | 'play' | 'over' = 'ready';
   const keys = new Set<string>();
   let pointer: V | null = null;
 
   const addDrone = () => {
     let p: V; do { p = { x: 20 + Math.random() * 160, y: 20 + Math.random() * 150 }; } while (blocked(p, 6) || Math.hypot(p.x - me.x, p.y - me.y) < 80);
-    drones.push({ ...p, vx: 0, vy: 0, tx: p.x, ty: p.y, chase: 0, lost: 0 });
+    drones.push({ ...p, tx: p.x, ty: p.y, chase: 0, lost: 0, spin: Math.random() * 6 });
   };
   const addCoin = () => {
-    let p: V; do { p = { x: 12 + Math.random() * 200, y: 12 + Math.random() * 168 }; } while (blocked(p, 5));
-    coins.push({ ...p, v: [0.01, 0.01, 0.02, 0.05][Math.floor(Math.random() * 4)], t: 0 });
+    let p: V; do { p = { x: 12 + Math.random() * 200, y: 14 + Math.random() * 166 }; } while (blocked(p, 6));
+    coins.push({ ...p, v: [0.01, 0.01, 0.02, 0.05][Math.floor(Math.random() * 4)], t: Math.random() * 6 });
   };
-  addDrone();
+  function newRound() {
+    me = { x: POOL.x + POOL.w / 2, y: POOL.y + POOL.h / 2, carry: 0, inv: 0, face: 1 };
+    shielded = 0; doxxed = 0; lives = 3; time = seconds; spawnT = 0; shake = 0; flash = 0;
+    drones = []; coins = []; pops = []; sparks = []; ripples = []; trail.length = 0;
+    addDrone(); for (let i = 0; i < 4; i++) addCoin();
+    showReady();
+  }
   // Dev builds expose live state so a scripted bot can play (tests and trailer capture). Stripped from production.
-  if (import.meta.env.DEV) (window as unknown as { __dp: unknown }).__dp = { me, coins, drones, pool: POOL, walls: WALLS, get shielded() { return shielded; }, get lives() { return lives; }, get time() { return time; } };
-  for (let i = 0; i < 4; i++) addCoin();
+  if (import.meta.env.DEV) (window as unknown as { __dp: unknown }).__dp = { get me() { return me; }, get coins() { return coins; }, get drones() { return drones; }, pool: POOL, walls: WALLS, get shielded() { return shielded; }, get lives() { return lives; }, get time() { return time; } };
 
+  // ---------- overlays ----------
+  function showReady() {
+    mode = 'ready';
+    overlay.className = 'game-overlay show';
+    overlay.innerHTML = `<div class="go-card">
+      <div class="go-kicker">Dark Pool</div>
+      <ol class="go-rules"><li><i class="r-coin"></i><span>Pick up gold coins</span></li><li><i class="r-pool"></i><span>Carry them into the <b>dark pool</b> to make them private</span></li><li><i class="r-drone"></i><span>Coins you carry are public, so dodge the Watcher’s drones</span></li></ol>
+      <button type="button" class="btn primary big go-start">Start ▸</button>
+      <small>or press an arrow key</small></div>`;
+    overlay.querySelector('.go-start')!.addEventListener('click', start);
+  }
+  function start() {
+    if (mode === 'play') return;
+    if (mode === 'over') newRound();
+    mode = 'play'; overlay.className = 'game-overlay'; overlay.innerHTML = ''; sfx.pop();
+    cv.focus({ preventScroll: true });
+  }
+  function showOver(r: Result, caught: boolean) {
+    overlay.className = 'game-overlay show';
+    overlay.innerHTML = `<div class="go-card">
+      <div class="go-kicker">${caught ? 'Caught by the Watcher' : 'Time’s up'}</div>
+      <div class="go-big">${r.shielded.toFixed(2)} <span>ZEC</span></div>
+      <div class="go-sub">made private in the dark pool</div>
+      <div class="go-stats"><span class="lost">Lost to the Watcher <b>${r.doxxed.toFixed(2)}</b></span><span>${r.isBest ? 'New best!' : 'Best'} <b>${r.best.toFixed(2)}</b></span></div>
+      <button type="button" class="btn primary go-again">Play again</button></div>`;
+    overlay.querySelector('.go-again')!.addEventListener('click', () => { newRound(); start(); });
+  }
+
+  // ---------- input ----------
   const onKey = (e: KeyboardEvent, down: boolean) => {
     const k = e.key.toLowerCase();
     if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'w', 'a', 's', 'd'].includes(k)) {
-      e.preventDefault(); down ? keys.add(k) : keys.delete(k); started = true;
+      if (!wrap.isConnected) return;
+      e.preventDefault(); down ? keys.add(k) : keys.delete(k);
+      if (down && mode === 'ready') start();
     }
   };
   const kd = (e: KeyboardEvent) => onKey(e, true), ku = (e: KeyboardEvent) => onKey(e, false);
   const toLocal = (e: PointerEvent): V => { const r = cv.getBoundingClientRect(); return { x: ((e.clientX - r.left) / r.width) * W, y: ((e.clientY - r.top) / r.height) * H }; };
-  const pd = (e: PointerEvent) => { pointer = toLocal(e); started = true; cv.setPointerCapture(e.pointerId); cv.focus({ preventScroll: true }); };
+  const pd = (e: PointerEvent) => { if (mode !== 'play') return; pointer = toLocal(e); cv.setPointerCapture(e.pointerId); };
   const pm = (e: PointerEvent) => { if (pointer) pointer = toLocal(e); };
   const pu = () => { pointer = null; };
   window.addEventListener('keydown', kd); window.addEventListener('keyup', ku);
   cv.addEventListener('pointerdown', pd); cv.addEventListener('pointermove', pm); cv.addEventListener('pointerup', pu); cv.addEventListener('pointercancel', pu);
 
-  const pop = (x: number, y: number, text: string, color: string) => pops.push({ x, y, text, t: 1.2, color });
+  const pop = (x: number, y: number, text: string, color: string) => pops.push({ x, y, text, t: 1.3, color });
+  const burst = (x: number, y: number, color: string, n: number, speed = 40) => {
+    for (let i = 0; i < n; i++) { const a = Math.random() * Math.PI * 2, s = speed * (0.4 + Math.random()); sparks.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0.7 + Math.random() * 0.4, max: 1.1, color, size: 1 + Math.random() * 1.6 }); }
+  };
 
+  // ---------- simulation ----------
   function step(dt: number) {
-    // player
     let dx = 0, dy = 0;
     if (keys.has('arrowleft') || keys.has('a')) dx -= 1; if (keys.has('arrowright') || keys.has('d')) dx += 1;
     if (keys.has('arrowup') || keys.has('w')) dy -= 1; if (keys.has('arrowdown') || keys.has('s')) dy += 1;
@@ -83,27 +144,29 @@ export function darkPool(host: HTMLElement, opts: { seconds?: number; onEnd: (r:
     const nx = me.x + (dx / len) * sp * dt, ny = me.y + (dy / len) * sp * dt;
     if (!blocked({ x: nx, y: me.y }, 4)) me.x = nx;
     if (!blocked({ x: me.x, y: ny }, 4)) me.y = ny;
+    if (dx) me.face = dx > 0 ? 1 : -1;
     me.inv = Math.max(0, me.inv - dt);
     const hidden = inPool(me);
-    if (!hidden && (dx || dy) && me.carry > 0) { trail.push({ x: me.x, y: me.y }); if (trail.length > 26) trail.shift(); }
+    if (!hidden && (dx || dy) && me.carry > 0) { trail.push({ x: me.x, y: me.y + 6 }); if (trail.length > 30) trail.shift(); }
     else if (trail.length) trail.shift();
+    if (hidden && (dx || dy) && Math.random() < dt * 6) ripples.push({ x: me.x, y: me.y + 5, t: 0 });
 
-    // shield on entering the pool
     if (hidden && me.carry > 0) {
-      shielded += me.carry; pop(me.x, me.y - 8, `+${me.carry.toFixed(2)} PRIVATE`, '#5dff8f'); me.carry = 0; sfx.whoosh(); trail.length = 0;
+      shielded = +(shielded + me.carry).toFixed(2); pop(me.x, me.y - 12, `+${me.carry.toFixed(2)} private`, '#5dff8f');
+      burst(me.x, me.y, '#5dff8f', 26, 46); ripples.push({ x: me.x, y: me.y, t: 0 });
+      me.carry = 0; sfx.whoosh(); trail.length = 0;
     }
-    // coins
     for (let i = coins.length - 1; i >= 0; i--) {
       const c = coins[i]; c.t += dt;
-      if (Math.hypot(c.x - me.x, c.y - me.y) < 7) { me.carry = +(me.carry + c.v).toFixed(2); coins.splice(i, 1); sfx.ding(); pop(c.x, c.y - 6, `+${c.v} public`, '#0e7490'); }
+      if (Math.hypot(c.x - me.x, c.y - me.y) < 8) { me.carry = +(me.carry + c.v).toFixed(2); coins.splice(i, 1); sfx.ding(); pop(c.x, c.y - 9, `+${c.v} public`, '#0e7490'); burst(c.x, c.y, '#ffd23f', 10, 30); }
     }
     spawnT += dt; if (spawnT > 1.6 && coins.length < 6) { spawnT = 0; addCoin(); }
 
-    // drones
     for (const d of drones) {
+      d.spin += dt * 30;
       const dist = Math.hypot(me.x - d.x, me.y - d.y);
       const sees = !hidden && dist < (me.carry > 0 ? SIGHT_CARRY : SIGHT_EMPTY);
-      if (sees) { d.chase = 1.0; d.lost = 0; } else if (d.chase > 0) { d.chase -= dt; if (hidden) d.lost = 0.9; }
+      if (sees) { if (d.chase <= 0) sfx.tick(); d.chase = 1.0; d.lost = 0; } else if (d.chase > 0) { d.chase -= dt; if (hidden) d.lost = 0.9; }
       d.lost = Math.max(0, d.lost - dt);
       let tx = d.tx, ty = d.ty, spd = 32;
       if (d.chase > 0 && !hidden) { tx = me.x; ty = me.y; spd = 52 + Math.min(16, me.carry * 100); }
@@ -112,101 +175,159 @@ export function darkPool(host: HTMLElement, opts: { seconds?: number; onEnd: (r:
       const ax = d.x + (vx / l) * spd * dt, ay = d.y + (vy / l) * spd * dt;
       if (!blocked({ x: ax, y: d.y }, 5) && !inPool({ x: ax, y: d.y })) d.x = ax; else d.tx = d.x - (vx / l) * 30;
       if (!blocked({ x: d.x, y: ay }, 5) && !inPool({ x: d.x, y: ay })) d.y = ay; else d.ty = d.y - (vy / l) * 30;
-      if (!hidden && me.inv <= 0 && dist < 7) {
-        lives--; doxxed += me.carry;
-        pop(me.x, me.y - 8, me.carry > 0 ? `CAUGHT −${me.carry.toFixed(2)}` : 'CAUGHT', '#e5484d');
-        me.carry = 0; me.inv = 2.2; sfx.buzz(); trail.length = 0;
+      if (!hidden && me.inv <= 0 && dist < 8) {
+        lives--; doxxed = +(doxxed + me.carry).toFixed(2);
+        pop(me.x, me.y - 12, me.carry > 0 ? `caught −${me.carry.toFixed(2)}` : 'caught!', '#e5484d');
+        burst(me.x, me.y, '#e5484d', 18, 40);
+        me.carry = 0; me.inv = 2.2; sfx.buzz(); trail.length = 0; shake = 0.35; flash = 0.35;
         me.x = POOL.x + POOL.w / 2; me.y = POOL.y + POOL.h / 2;
-        if (lives <= 0) end();
+        if (lives <= 0) { end(true); return; }
       }
     }
-    // more watchers over time
     const want = 1 + Math.floor((seconds - time) / 15);
     if (drones.length < Math.min(3, want)) addDrone();
-    for (let i = pops.length - 1; i >= 0; i--) { pops[i].t -= dt; pops[i].y -= 14 * dt; if (pops[i].t <= 0) pops.splice(i, 1); }
-    time -= dt; if (time <= 0) { time = 0; end(); }
+    for (let i = pops.length - 1; i >= 0; i--) { pops[i].t -= dt; pops[i].y -= 16 * dt; if (pops[i].t <= 0) pops.splice(i, 1); }
+    time -= dt; if (time <= 0) { time = 0; end(false); }
+  }
+  function fx(dt: number) {
+    for (let i = sparks.length - 1; i >= 0; i--) { const s = sparks[i]; s.life -= dt; s.x += s.vx * dt; s.y += s.vy * dt; s.vx *= 0.92; s.vy *= 0.92; if (s.life <= 0) sparks.splice(i, 1); }
+    for (let i = ripples.length - 1; i >= 0; i--) { ripples[i].t += dt; if (ripples[i].t > 1.2) ripples.splice(i, 1); }
+    shake = Math.max(0, shake - dt); flash = Math.max(0, flash - dt);
   }
 
-  function px(x: number, y: number, w: number, h: number, c: string) { g.fillStyle = c; g.fillRect(Math.round(x), Math.round(y), w, h); }
+  // ---------- drawing ----------
+  const rr = (x: number, y: number, w: number, h: number, r: number) => { g.beginPath(); g.roundRect(x, y, w, h, r); };
   function draw(now: number) {
-    // glass district: lit grid
-    px(0, 0, W, H, '#eef6fa');
-    g.fillStyle = '#dcebf2';
-    for (let x = 0; x < W; x += 8) g.fillRect(x, 0, 1, H);
-    for (let y = 0; y < H; y += 8) g.fillRect(0, y, W, 1);
-    for (const w of WALLS) { px(w.x, w.y, w.w, w.h, '#cfe9f4'); g.strokeStyle = '#7fb8cf'; g.globalAlpha = 1; g.strokeRect(w.x + 0.5, w.y + 0.5, w.w - 1, w.h - 1); g.globalAlpha = 1; px(w.x + 3, w.y + 3, 3, 3, '#ffd23f'); }
-    // dark pool: dithered void with drifting pixels
-    px(POOL.x, POOL.y, POOL.w, POOL.h, '#000');
-    for (let y = POOL.y; y < POOL.y + POOL.h; y += 2) for (let x = POOL.x + ((y / 2) % 2); x < POOL.x + POOL.w; x += 4) { g.fillStyle = '#04100a'; g.fillRect(x, y, 1, 1); }
-    for (let i = 0; i < 18; i++) { const t = now / 1000 + i * 7.3; const x = POOL.x + ((i * 37 + t * 6) % POOL.w), y = POOL.y + ((i * 53 + Math.sin(t) * 9 + POOL.h) % POOL.h); px(x, y, 1, 1, i % 3 ? '#1d3a2a' : '#3f7f5f'); }
-    g.strokeStyle = '#5dff8f'; g.globalAlpha = 0.35; g.setLineDash([2, 2]); g.strokeRect(POOL.x + 0.5, POOL.y + 0.5, POOL.w - 1, POOL.h - 1); g.setLineDash([]); g.globalAlpha = 1;
-    g.fillStyle = '#5dff8f'; g.font = '8px "JetBrains Mono", monospace'; g.globalAlpha = 0.8; g.fillText('DARK POOL', POOL.x + 18, POOL.y + 10); g.fillText('= PRIVATE', POOL.x + 22, POOL.y + POOL.h - 4); g.globalAlpha = 1;
+    const t = now / 1000;
+    g.setTransform(scale, 0, 0, scale, 0, 0);
+    if (shake > 0) g.translate((Math.random() - 0.5) * 4 * shake / 0.35, (Math.random() - 0.5) * 4 * shake / 0.35);
+    // floor: the bright, public glass district
+    const fl = g.createLinearGradient(0, 0, 0, H); fl.addColorStop(0, '#f4fafd'); fl.addColorStop(1, '#e6f2f8');
+    g.fillStyle = fl; g.fillRect(-4, -4, W + 8, H + 8);
+    g.strokeStyle = 'rgba(14,116,144,0.08)'; g.lineWidth = 0.5; g.beginPath();
+    for (let x = 0; x <= W; x += 8) { g.moveTo(x, 0); g.lineTo(x, H); }
+    for (let y = 0; y <= H; y += 8) { g.moveTo(0, y); g.lineTo(W, y); }
+    g.stroke();
+    // glass buildings
+    for (const w of WALLS) {
+      g.fillStyle = 'rgba(14,60,80,0.12)'; rr(w.x + 1.5, w.y + 2.5, w.w, w.h, 3); g.fill();
+      const gr = g.createLinearGradient(w.x, w.y, w.x + w.w, w.y + w.h); gr.addColorStop(0, '#e9f8fd'); gr.addColorStop(1, '#bfe2f0');
+      g.fillStyle = gr; rr(w.x, w.y, w.w, w.h, 3); g.fill();
+      g.strokeStyle = '#7fb8cf'; g.lineWidth = 0.8; g.stroke();
+      for (let yy = w.y + 4; yy < w.y + w.h - 3; yy += 6) for (let xx = w.x + 4; xx < w.x + w.w - 3; xx += 6) {
+        const lit = ((xx * 7 + yy * 13) | 0) % 3 === 0;
+        g.fillStyle = lit ? '#ffd23f' : 'rgba(14,116,144,0.18)'; g.fillRect(xx, yy, 2.4, 2.4);
+      }
+      g.strokeStyle = 'rgba(255,255,255,0.9)'; g.lineWidth = 0.8; g.beginPath(); g.moveTo(w.x + 2, w.y + w.h - 3); g.lineTo(w.x + 2, w.y + 2); g.lineTo(w.x + w.w - 3, w.y + 2); g.stroke();
+    }
+    // the dark pool
+    g.save();
+    g.shadowColor = 'rgba(93,255,143,0.55)'; g.shadowBlur = 10 * scale / 4;
+    const pg = g.createLinearGradient(0, POOL.y, 0, POOL.y + POOL.h); pg.addColorStop(0, '#0f1d16'); pg.addColorStop(1, '#030605');
+    g.fillStyle = pg; rr(POOL.x, POOL.y, POOL.w, POOL.h, 10); g.fill();
+    g.restore();
+    g.save(); rr(POOL.x, POOL.y, POOL.w, POOL.h, 10); g.clip();
+    for (let i = 0; i < 46; i++) {
+      const sp = 4 + (i % 5) * 2, x = POOL.x + ((i * 37.7) % POOL.w), y = POOL.y + POOL.h - ((i * 23.3 + t * sp) % POOL.h);
+      g.globalAlpha = 0.25 + 0.35 * Math.abs(Math.sin(t * 1.5 + i)); g.fillStyle = i % 4 ? '#3f7f5f' : '#5dff8f'; g.fillRect(x, y, 1.4, 1.4);
+    }
+    g.globalAlpha = 1;
+    for (const r of ripples) { g.strokeStyle = `rgba(93,255,143,${0.5 * (1 - r.t / 1.2)})`; g.lineWidth = 0.8; g.beginPath(); g.ellipse(r.x, r.y, 3 + r.t * 16, 1.5 + r.t * 7, 0, 0, Math.PI * 2); g.stroke(); }
+    g.restore();
+    g.strokeStyle = 'rgba(93,255,143,0.75)'; g.lineWidth = 1; rr(POOL.x + 0.5, POOL.y + 0.5, POOL.w - 1, POOL.h - 1, 10); g.stroke();
+    g.font = `700 6.5px ${MONO}`; g.textAlign = 'center'; g.fillStyle = '#5dff8f';
+    g.fillText('DARK POOL', POOL.x + POOL.w / 2, POOL.y + 12);
+    g.font = `600 5.5px ${SANS}`; g.fillStyle = 'rgba(200,255,220,0.7)'; g.fillText('coins here are private', POOL.x + POOL.w / 2, POOL.y + POOL.h - 7);
+    g.textAlign = 'left';
+    // trail: what a public wallet leaves behind
+    for (let i = 0; i < trail.length; i++) { g.globalAlpha = (i / trail.length) * 0.55; g.fillStyle = '#3aa0c4'; g.beginPath(); g.arc(trail[i].x, trail[i].y, 1.1, 0, Math.PI * 2); g.fill(); }
+    g.globalAlpha = 1;
     // coins
-    for (const c of coins) { const b = Math.sin(c.t * 5) > 0 ? 0 : 1; const y0 = c.y - b; px(c.x - 3, y0 - 3, 6, 6, '#f4b728'); px(c.x - 2, y0 - 2, 4, 4, '#ffd23f'); px(c.x - 2, y0 - 2, 4, 1, '#7a5a10'); px(c.x, y0 - 1, 1, 1, '#7a5a10'); px(c.x - 1, y0, 1, 1, '#7a5a10'); px(c.x - 2, y0 + 1, 4, 1, '#7a5a10'); }
-    // trail = the public record of a transparent wallet
-    for (let i = 0; i < trail.length; i++) { g.globalAlpha = (i / trail.length) * 0.6; px(trail[i].x - 1, trail[i].y - 1, 2, 2, '#3aa0c4'); } g.globalAlpha = 1;
+    for (const c of coins) {
+      const b = Math.sin(c.t * 4) * 1.2;
+      g.fillStyle = 'rgba(120,80,0,0.18)'; g.beginPath(); g.ellipse(c.x, c.y + 5.5, 3.6 - b * 0.4, 1.2, 0, 0, Math.PI * 2); g.fill();
+      const cg = g.createRadialGradient(c.x - 1.4, c.y - 1.8 + b, 0.5, c.x, c.y + b, 5); cg.addColorStop(0, '#fff2b0'); cg.addColorStop(0.5, '#ffd23f'); cg.addColorStop(1, '#d99a0b');
+      g.fillStyle = cg; g.beginPath(); g.arc(c.x, c.y + b, 4.6, 0, Math.PI * 2); g.fill();
+      g.strokeStyle = '#b37a06'; g.lineWidth = 0.6; g.stroke();
+      g.fillStyle = '#8a5a00'; g.font = `800 5.6px ${SANS}`; g.textAlign = 'center'; g.fillText('Z', c.x, c.y + b + 2); g.textAlign = 'left';
+      const sh = (Math.sin(c.t * 2) + 1) / 2; g.strokeStyle = `rgba(255,255,255,${0.4 + sh * 0.5})`; g.lineWidth = 0.7; g.beginPath(); g.arc(c.x, c.y + b, 3.4, Math.PI * 1.1, Math.PI * 1.45); g.stroke();
+    }
     // drones
+    const meHidden = inPool(me);
     for (const d of drones) {
-      const chasing = d.chase > 0 && !inPool(me);
-      g.strokeStyle = chasing ? '#e5484d' : '#e5484d'; g.globalAlpha = chasing ? 0.55 : 0.22;
-      g.beginPath(); g.arc(d.x, d.y, me.carry > 0 ? SIGHT_CARRY : SIGHT_EMPTY, 0, Math.PI * 2); g.stroke(); g.globalAlpha = 1;
-      if (chasing) { g.strokeStyle = '#e5484d'; g.setLineDash([3, 3]); g.beginPath(); g.moveTo(d.x, d.y); g.lineTo(me.x, me.y); g.stroke(); g.setLineDash([]); }
-      px(d.x - 4, d.y - 3, 8, 7, '#2b3a42'); px(d.x - 3, d.y - 2, 6, 5, '#f2f5f6');
+      const chasing = d.chase > 0 && !meHidden;
+      const rad = me.carry > 0 ? SIGHT_CARRY : SIGHT_EMPTY;
+      const vg = g.createRadialGradient(d.x, d.y, 2, d.x, d.y, rad);
+      vg.addColorStop(0, chasing ? 'rgba(229,72,77,0.22)' : 'rgba(229,72,77,0.10)'); vg.addColorStop(1, 'rgba(229,72,77,0)');
+      g.fillStyle = vg; g.beginPath(); g.arc(d.x, d.y, rad, 0, Math.PI * 2); g.fill();
+      g.strokeStyle = chasing ? 'rgba(229,72,77,0.55)' : 'rgba(229,72,77,0.18)'; g.lineWidth = 0.6; g.setLineDash([2, 2]); g.beginPath(); g.arc(d.x, d.y, rad, 0, Math.PI * 2); g.stroke(); g.setLineDash([]);
+      if (chasing) { g.strokeStyle = 'rgba(229,72,77,0.8)'; g.lineWidth = 0.8; g.setLineDash([3, 2]); g.beginPath(); g.moveTo(d.x, d.y); g.lineTo(me.x, me.y); g.stroke(); g.setLineDash([]); }
+      g.fillStyle = 'rgba(0,0,0,0.15)'; g.beginPath(); g.ellipse(d.x, d.y + 8, 5, 1.5, 0, 0, Math.PI * 2); g.fill();
+      // rotors
+      g.strokeStyle = 'rgba(43,58,66,0.6)'; g.lineWidth = 0.6;
+      for (const ox of [-5, 5]) { g.beginPath(); g.ellipse(d.x + ox, d.y - 4.5, 3.2, 0.9 + Math.abs(Math.sin(d.spin)) * 0.5, 0, 0, Math.PI * 2); g.stroke(); }
+      g.fillStyle = '#2b3a42'; rr(d.x - 5.5, d.y - 4.5, 11, 8.5, 3); g.fill();
+      g.fillStyle = '#f2f5f6'; g.beginPath(); g.arc(d.x, d.y - 0.3, 3, 0, Math.PI * 2); g.fill();
       const lx = Math.max(-1, Math.min(1, (me.x - d.x) / 30)), ly = Math.max(-1, Math.min(1, (me.y - d.y) / 30));
-      px(d.x - 2 + lx, d.y - 1 + ly, 3, 3, chasing ? '#ff2a2a' : '#c0392b');
-      if (d.lost > 0) { g.fillStyle = '#a8730a'; g.fillText('?', d.x - 2, d.y - 6); }
-      else if (chasing) { g.fillStyle = '#e5484d'; g.fillText('!', d.x - 1, d.y - 6); }
+      g.fillStyle = chasing ? '#ff2a2a' : '#c0392b'; g.beginPath(); g.arc(d.x + lx * 1.1, d.y - 0.3 + ly * 1.1, 1.5, 0, Math.PI * 2); g.fill();
+      g.font = `800 8px ${SANS}`; g.textAlign = 'center';
+      if (d.lost > 0) { g.fillStyle = '#a8730a'; g.fillText('?', d.x, d.y - 9); }
+      else if (chasing) { g.fillStyle = '#e5484d'; g.fillText('!', d.x, d.y - 9); }
+      g.textAlign = 'left';
     }
-    // player: a tiny hooded identity
-    const blink = me.inv > 0 && Math.floor(now / 100) % 2 === 0;
+    // player: your pixel identity
+    const blink = me.inv > 0 && Math.floor(now / 110) % 2 === 0;
     if (!blink) {
-      const hid = inPool(me);
-      g.globalAlpha = hid ? 0.55 : 1;
-      if (!hid) { g.fillStyle = '#15221b'; g.fillRect(Math.round(me.x - 5), Math.round(me.y - 6), 10, 11); }
-      px(me.x - 4, me.y - 5, 8, 9, pal.main); px(me.x - 4, me.y - 5, 3, 9, pal.light); px(me.x - 2, me.y - 3, 5, 4, '#050807');
-      px(me.x - 1, me.y - 2, 1, 1, traits.eyeColor); px(me.x + 1, me.y - 2, 1, 1, traits.eyeColor);
-      if (me.carry > 0 && !hid) { px(me.x - 1, me.y - 9, 3, 3, '#f4b728'); }
-      g.globalAlpha = 1;
+      g.save();
+      if (meHidden) { g.globalAlpha = 0.75; g.shadowColor = '#5dff8f'; g.shadowBlur = 8 * scale / 4; }
+      g.fillStyle = 'rgba(0,0,0,0.18)'; g.beginPath(); g.ellipse(me.x, me.y + 10, 6, 1.7, 0, 0, Math.PI * 2); g.fill();
+      g.fillStyle = meHidden ? '#0b1410' : '#ffffff'; rr(me.x - 9, me.y - 9, 18, 18, 4.5); g.fill();
+      g.strokeStyle = meHidden ? '#5dff8f' : '#15221b'; g.lineWidth = 0.8; g.stroke();
+      g.imageSmoothingEnabled = false;
+      g.save(); rr(me.x - 8, me.y - 8, 16, 16, 3.5); g.clip(); g.fillStyle = '#0b1410'; g.fillRect(me.x - 8, me.y - 8, 16, 16); g.drawImage(meSprite, me.x - 8, me.y - 8, 16, 16); g.restore();
+      g.imageSmoothingEnabled = true;
+      g.restore();
+      if (me.carry > 0 && !meHidden) {
+        const n = Math.min(4, Math.max(1, Math.round(me.carry / 0.02)));
+        for (let i = 0; i < n; i++) { g.fillStyle = '#d99a0b'; g.beginPath(); g.ellipse(me.x, me.y - 12 - i * 1.6, 3, 1.2, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = '#ffd23f'; g.beginPath(); g.ellipse(me.x, me.y - 12.4 - i * 1.6, 3, 1.1, 0, 0, Math.PI * 2); g.fill(); }
+      }
     }
-    for (const p of pops) { g.globalAlpha = Math.min(1, p.t); g.fillStyle = p.color; g.fillText(p.text, p.x - p.text.length * 2.4, p.y); } g.globalAlpha = 1;
-    if (!started) {
-      px(0, H / 2 - 18, W, 36, 'rgba(255,255,255,0.9)');
-      g.textAlign = 'center'; g.fillStyle = '#0b7a43'; g.fillText('TAP HERE OR PRESS AN ARROW KEY TO START', W / 2, H / 2 - 3);
-      g.fillStyle = '#15221b'; g.fillText('coins you carry are public: the drones can see them', W / 2, H / 2 + 9); g.textAlign = 'left';
-    }
-    hud.innerHTML = `<span>Time <b>${Math.ceil(time)}s</b></span><span class="${me.carry > 0 ? 'exposed' : ''}">Carrying (public) <b>${me.carry.toFixed(2)}</b></span><span class="ok">Hidden in pool (private) <b>${shielded.toFixed(2)}</b></span><span>Lives <b class="hearts">${'♥'.repeat(Math.max(0, lives))}${'♡'.repeat(3 - Math.max(0, lives))}</b></span>`;
+    // particles + floating text
+    for (const s of sparks) { g.globalAlpha = Math.max(0, s.life / s.max); g.fillStyle = s.color; g.fillRect(s.x - s.size / 2, s.y - s.size / 2, s.size, s.size); }
+    g.globalAlpha = 1;
+    g.font = `800 6.5px ${SANS}`; g.textAlign = 'center'; g.lineJoin = 'round';
+    for (const p of pops) { g.globalAlpha = Math.min(1, p.t); g.lineWidth = 2; g.strokeStyle = inPool(p) ? '#0b1410' : '#ffffff'; g.strokeText(p.text, p.x, p.y); g.fillStyle = p.color; g.fillText(p.text, p.x, p.y); }
+    g.globalAlpha = 1; g.textAlign = 'left';
+    if (flash > 0) { g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = `rgba(229,72,77,${flash * 0.6})`; g.fillRect(0, 0, cv.width, cv.height); }
+    hud.innerHTML = `<span>Time <b>${Math.ceil(time)}s</b></span><span class="${me.carry > 0 ? 'exposed' : ''}">Carrying (public) <b>${me.carry.toFixed(2)}</b></span><span class="ok">Private <b>${shielded.toFixed(2)}</b></span><span>Lives <b class="hearts">${'♥'.repeat(Math.max(0, lives))}${'♡'.repeat(3 - Math.max(0, lives))}</b></span>`;
   }
 
-  let raf = 0;
+  // ---------- loop ----------
+  let raf = 0, last = 0, alive = true;
   function frame(now: number) {
-    if (!running) return;
+    if (!alive) return;
+    if (!wrap.isConnected) { cleanup(); return; }
     const dt = Math.min(0.05, last ? (now - last) / 1000 : 0); last = now;
-    if (started) step(dt);
+    if (mode === 'play') step(dt);
+    fx(dt);
     draw(now);
     raf = requestAnimationFrame(frame);
   }
-  raf = requestAnimationFrame(frame);
-
+  function end(caught: boolean) {
+    if (mode !== 'play') return;
+    mode = 'over'; keys.clear(); pointer = null;
+    const isBest = shielded > (state.best ?? 0) && shielded > 0;
+    state.best = +Math.max(state.best ?? 0, shielded).toFixed(2); save();
+    sfx.fanfare();
+    const r: Result = { shielded, doxxed, best: state.best, isBest };
+    showOver(r, caught);
+    opts.onEnd(r);
+  }
   function cleanup() {
-    running = false; cancelAnimationFrame(raf);
+    alive = false; cancelAnimationFrame(raf); ro.disconnect();
     window.removeEventListener('keydown', kd); window.removeEventListener('keyup', ku);
   }
-  let ended = false;
-  function end() {
-    if (ended) return; ended = true;
-    cleanup();
-    const best = Math.max(state.best ?? 0, shielded);
-    const isBest = shielded > (state.best ?? 0) && shielded > 0;
-    state.best = +best.toFixed(2); save();
-    sfx.fanfare();
-    draw(performance.now());
-    g.fillStyle = 'rgba(255,255,255,0.93)'; g.fillRect(0, H / 2 - 30, W, 60);
-    g.textAlign = 'center'; g.font = '10px "JetBrains Mono", monospace';
-    g.fillStyle = '#15221b'; g.fillText(lives <= 0 ? 'CAUGHT! GAME OVER' : 'TIME UP!', W / 2, H / 2 - 10);
-    g.fillStyle = '#0b7a43'; g.fillText(`HIDDEN IN THE POOL: ${shielded.toFixed(2)} ZEC`, W / 2, H / 2 + 6);
-    g.fillStyle = '#b42b30'; g.font = '8px "JetBrains Mono", monospace'; g.fillText(`LOST TO THE WATCHER: ${doxxed.toFixed(2)} ZEC`, W / 2, H / 2 + 20); g.textAlign = 'left';
-    opts.onEnd({ shielded: +shielded.toFixed(2), doxxed: +doxxed.toFixed(2), best: state.best, isBest });
-  }
-  cv.focus({ preventScroll: true });
+  newRound();
+  raf = requestAnimationFrame(frame);
   return cleanup;
 }

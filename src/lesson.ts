@@ -2,6 +2,7 @@
 // at most one small action, then Continue. One idea per screen keeps it easy for beginners.
 import { h, sfx } from './ui';
 import { castPortrait, CAST, type Who } from './identity';
+import { icon, LEVEL_ICONS } from './icons';
 
 export type StepCtx = {
   area: HTMLElement;
@@ -31,7 +32,7 @@ export function runLesson(host: HTMLElement, L: LessonDef, total: number): Promi
   host.replaceChildren(h('section', { class: 'lesson' },
     h('div', { class: 'lesson-top' },
       h('a', { class: 'back', href: '#/' }, '← All levels'),
-      h('span', { class: 'lesson-name' }, `Level ${L.n} of ${total} · ${L.title}`), counter),
+      h('span', { class: 'lesson-name' }, h('span', { class: 'lesson-icon' }, icon(LEVEL_ICONS[L.n - 1] ?? 'star', 16)), `Level ${L.n} of ${total} · ${L.title}`), counter),
     h('div', { class: 'steps-bar', 'aria-hidden': 'true' }, bar),
     card));
 
@@ -49,6 +50,7 @@ export function runLesson(host: HTMLElement, L: LessonDef, total: number): Promi
         speech.replaceChildren(
           h('figure', { class: `frame ${who}` }, castPortrait(who, pose, 4)),
           h('div', { class: 'speech-body' }, h('b', { class: 'speaker' }, CAST[who].name), h('p', { class: 'line', html: text })));
+        speech.classList.remove('talk'); void speech.offsetWidth; speech.classList.add('talk');
       };
       say(s.who, s.pose, s.text);
       let unlocked = !s.wait;
