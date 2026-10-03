@@ -30,7 +30,7 @@ export function darkPool(host: HTMLElement, opts: { seconds?: number; onEnd: (r:
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H; cv.className = 'game-cv'; cv.tabIndex = 0;
   cv.setAttribute('aria-label', 'Dark Pool game. Move with arrow keys or WASD, or hold and drag on the screen.');
   const help = document.createElement('div'); help.className = 'game-help';
-  help.innerHTML = '<span>MOVE: ←↑↓→ / WASD / drag</span><span>GRAB ZEC · REACH THE DARK POOL TO SHIELD IT</span>';
+  help.innerHTML = '<span>Move: arrow keys, or press and drag</span><span>Pick up coins → carry them into the dark pool</span>';
   wrap.append(hud, cv, help); host.append(wrap);
   const g = cv.getContext('2d')!; g.imageSmoothingEnabled = false;
 
@@ -52,7 +52,7 @@ export function darkPool(host: HTMLElement, opts: { seconds?: number; onEnd: (r:
     let p: V; do { p = { x: 12 + Math.random() * 200, y: 12 + Math.random() * 168 }; } while (blocked(p, 5));
     coins.push({ ...p, v: [0.01, 0.01, 0.02, 0.05][Math.floor(Math.random() * 4)], t: 0 });
   };
-  addDrone(); addDrone();
+  addDrone();
   // Dev builds expose live state so a scripted bot can play (tests and trailer capture). Stripped from production.
   if (import.meta.env.DEV) (window as unknown as { __dp: unknown }).__dp = { me, coins, drones, pool: POOL, walls: WALLS, get shielded() { return shielded; }, get lives() { return lives; }, get time() { return time; } };
   for (let i = 0; i < 4; i++) addCoin();
@@ -90,12 +90,12 @@ export function darkPool(host: HTMLElement, opts: { seconds?: number; onEnd: (r:
 
     // shield on entering the pool
     if (hidden && me.carry > 0) {
-      shielded += me.carry; pop(me.x, me.y - 8, `+${me.carry.toFixed(2)} SHIELDED`, '#5dff8f'); me.carry = 0; sfx.whoosh(); trail.length = 0;
+      shielded += me.carry; pop(me.x, me.y - 8, `+${me.carry.toFixed(2)} PRIVATE`, '#5dff8f'); me.carry = 0; sfx.whoosh(); trail.length = 0;
     }
     // coins
     for (let i = coins.length - 1; i >= 0; i--) {
       const c = coins[i]; c.t += dt;
-      if (Math.hypot(c.x - me.x, c.y - me.y) < 7) { me.carry = +(me.carry + c.v).toFixed(2); coins.splice(i, 1); sfx.ding(); pop(c.x, c.y - 6, `+${c.v} (PUBLIC)`, '#9fc6d4'); }
+      if (Math.hypot(c.x - me.x, c.y - me.y) < 7) { me.carry = +(me.carry + c.v).toFixed(2); coins.splice(i, 1); sfx.ding(); pop(c.x, c.y - 6, `+${c.v} public`, '#9fc6d4'); }
     }
     spawnT += dt; if (spawnT > 1.6 && coins.length < 6) { spawnT = 0; addCoin(); }
 
@@ -114,15 +114,15 @@ export function darkPool(host: HTMLElement, opts: { seconds?: number; onEnd: (r:
       if (!blocked({ x: d.x, y: ay }, 5) && !inPool({ x: d.x, y: ay })) d.y = ay; else d.ty = d.y - (vy / l) * 30;
       if (!hidden && me.inv <= 0 && dist < 7) {
         lives--; doxxed += me.carry;
-        pop(me.x, me.y - 8, me.carry > 0 ? `DOXXED −${me.carry.toFixed(2)}` : 'TRACED', '#ff4d4d');
+        pop(me.x, me.y - 8, me.carry > 0 ? `CAUGHT −${me.carry.toFixed(2)}` : 'CAUGHT', '#ff4d4d');
         me.carry = 0; me.inv = 2.2; sfx.buzz(); trail.length = 0;
         me.x = POOL.x + POOL.w / 2; me.y = POOL.y + POOL.h / 2;
         if (lives <= 0) end();
       }
     }
     // more watchers over time
-    const want = 2 + Math.floor((seconds - time) / 20);
-    if (drones.length < Math.min(4, want)) addDrone();
+    const want = 1 + Math.floor((seconds - time) / 15);
+    if (drones.length < Math.min(3, want)) addDrone();
     for (let i = pops.length - 1; i >= 0; i--) { pops[i].t -= dt; pops[i].y -= 14 * dt; if (pops[i].t <= 0) pops.splice(i, 1); }
     time -= dt; if (time <= 0) { time = 0; end(); }
   }
@@ -140,7 +140,7 @@ export function darkPool(host: HTMLElement, opts: { seconds?: number; onEnd: (r:
     for (let y = POOL.y; y < POOL.y + POOL.h; y += 2) for (let x = POOL.x + ((y / 2) % 2); x < POOL.x + POOL.w; x += 4) { g.fillStyle = '#04100a'; g.fillRect(x, y, 1, 1); }
     for (let i = 0; i < 18; i++) { const t = now / 1000 + i * 7.3; const x = POOL.x + ((i * 37 + t * 6) % POOL.w), y = POOL.y + ((i * 53 + Math.sin(t) * 9 + POOL.h) % POOL.h); px(x, y, 1, 1, i % 3 ? '#1d3a2a' : '#3f7f5f'); }
     g.strokeStyle = '#5dff8f'; g.globalAlpha = 0.35; g.setLineDash([2, 2]); g.strokeRect(POOL.x + 0.5, POOL.y + 0.5, POOL.w - 1, POOL.h - 1); g.setLineDash([]); g.globalAlpha = 1;
-    g.fillStyle = '#5dff8f'; g.font = '8px "JetBrains Mono", monospace'; g.globalAlpha = 0.8; g.fillText('DARK POOL', POOL.x + 18, POOL.y + 10); g.fillText('(IRONWOOD)', POOL.x + 16, POOL.y + POOL.h - 4); g.globalAlpha = 1;
+    g.fillStyle = '#5dff8f'; g.font = '8px "JetBrains Mono", monospace'; g.globalAlpha = 0.8; g.fillText('DARK POOL', POOL.x + 18, POOL.y + 10); g.fillText('= PRIVATE', POOL.x + 22, POOL.y + POOL.h - 4); g.globalAlpha = 1;
     // coins
     for (const c of coins) { const b = Math.sin(c.t * 5) > 0 ? 0 : 1; const y0 = c.y - b; px(c.x - 3, y0 - 3, 6, 6, '#f4b728'); px(c.x - 2, y0 - 2, 4, 4, '#ffd23f'); px(c.x - 2, y0 - 2, 4, 1, '#7a5a10'); px(c.x, y0 - 1, 1, 1, '#7a5a10'); px(c.x - 1, y0, 1, 1, '#7a5a10'); px(c.x - 2, y0 + 1, 4, 1, '#7a5a10'); }
     // trail = the public record of a transparent wallet
@@ -170,10 +170,10 @@ export function darkPool(host: HTMLElement, opts: { seconds?: number; onEnd: (r:
     for (const p of pops) { g.globalAlpha = Math.min(1, p.t); g.fillStyle = p.color; g.fillText(p.text, p.x - p.text.length * 2.4, p.y); } g.globalAlpha = 1;
     if (!started) {
       px(0, H / 2 - 18, W, 36, 'rgba(0,0,0,0.75)');
-      g.fillStyle = '#5dff8f'; g.fillText('PRESS AN ARROW KEY OR DRAG TO START', 70, H / 2 - 3);
-      g.fillStyle = '#c8ffdc'; g.fillText('carrying ZEC = transparent = traceable', 74, H / 2 + 9);
+      g.textAlign = 'center'; g.fillStyle = '#5dff8f'; g.fillText('TAP HERE OR PRESS AN ARROW KEY TO START', W / 2, H / 2 - 3);
+      g.fillStyle = '#c8ffdc'; g.fillText('coins you carry are public: the drones can see them', W / 2, H / 2 + 9); g.textAlign = 'left';
     }
-    hud.innerHTML = `<span>TIME <b>${Math.ceil(time)}s</b></span><span class="${me.carry > 0 ? 'exposed' : ''}">EXPOSED <b>${me.carry.toFixed(2)}</b> ZEC</span><span class="ok">SHIELDED <b>${shielded.toFixed(2)}</b> ZEC</span><span>LIVES <b>${'■'.repeat(Math.max(0, lives))}${'□'.repeat(3 - Math.max(0, lives))}</b></span>`;
+    hud.innerHTML = `<span>Time <b>${Math.ceil(time)}s</b></span><span class="${me.carry > 0 ? 'exposed' : ''}">Carrying (public) <b>${me.carry.toFixed(2)}</b></span><span class="ok">Hidden in pool (private) <b>${shielded.toFixed(2)}</b></span><span>Lives <b>${'■'.repeat(Math.max(0, lives))}${'□'.repeat(3 - Math.max(0, lives))}</b></span>`;
   }
 
   let raf = 0;
@@ -201,9 +201,9 @@ export function darkPool(host: HTMLElement, opts: { seconds?: number; onEnd: (r:
     draw(performance.now());
     g.fillStyle = 'rgba(0,0,0,0.82)'; g.fillRect(0, H / 2 - 30, W, 60);
     g.textAlign = 'center'; g.font = '10px "JetBrains Mono", monospace';
-    g.fillStyle = '#ffffff'; g.fillText(lives <= 0 ? 'TRACED. SESSION OVER' : 'TIME. SESSION OVER', W / 2, H / 2 - 10);
-    g.fillStyle = '#5dff8f'; g.fillText(`SHIELDED ${shielded.toFixed(2)} ZEC`, W / 2, H / 2 + 6);
-    g.fillStyle = '#ff4d4d'; g.font = '8px "JetBrains Mono", monospace'; g.fillText(`DOXXED ${doxxed.toFixed(2)} ZEC`, W / 2, H / 2 + 20); g.textAlign = 'left';
+    g.fillStyle = '#ffffff'; g.fillText(lives <= 0 ? 'CAUGHT! GAME OVER' : 'TIME UP!', W / 2, H / 2 - 10);
+    g.fillStyle = '#5dff8f'; g.fillText(`HIDDEN IN THE POOL: ${shielded.toFixed(2)} ZEC`, W / 2, H / 2 + 6);
+    g.fillStyle = '#ff4d4d'; g.font = '8px "JetBrains Mono", monospace'; g.fillText(`LOST TO THE WATCHER: ${doxxed.toFixed(2)} ZEC`, W / 2, H / 2 + 20); g.textAlign = 'left';
     opts.onEnd({ shielded: +shielded.toFixed(2), doxxed: +doxxed.toFixed(2), best: state.best, isBest });
   }
   cv.focus({ preventScroll: true });

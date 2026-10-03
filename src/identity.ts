@@ -180,7 +180,8 @@ export function drawIdentity(canvas: HTMLCanvasElement, layers: number, px = 6, 
   paint(canvas, portraitGrid(playerTraits(), state.seed, 'idle', layers), px, bg);
 }
 
-export function identityLayers(): number { return Math.min(8, state.done.length); }
+// 7 levels unlock 8 pieces: the last level adds both the eyes and the halo.
+export function identityLayers(): number { const d = state.done.length; return d >= 7 ? 8 : d; }
 
 export function traitList(): [string, string][] {
   const t = playerTraits();

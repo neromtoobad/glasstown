@@ -1,5 +1,4 @@
 import { state, save } from './state';
-import { CAST, castPortrait, type Who } from './identity';
 
 // ---------- tiny DOM helper ----------
 type Attrs = Record<string, string | number | boolean | EventListener | undefined>;
@@ -54,104 +53,9 @@ export const sfx = {
 };
 export function toggleMute(): boolean { state.muted = !state.muted; save(); return state.muted; }
 
-// ---------- characters ----------
-export type { Who } from './identity';
-export const NAMES: Record<Who, string> = { zee: CAST.zee.name, peep: CAST.peep.name, moss: CAST.moss.name, gus: CAST.gus.name };
-
-/** A framed portrait of a cast member, for use outside dialogue. */
-export function portraitEl(who: Who, pose: string, px = 6, cls = ''): HTMLElement {
-  const f = h('figure', { class: `frame ${who} ${cls}` }, castPortrait(who, pose, px));
-  return f;
-}
-
-// ---------- dialogue ----------
-// A terminal-style dialogue: allies (Zero, Keeper) on the left, the Watcher and "Support" on the right.
-// Lines type out; click, Space or Enter finishes the line, then advances.
-export type Line = { who: Who; pose: string; text: string };
-
-export class Dialog {
-  el: HTMLElement;
-  private left = h('div', { class: 'slot left' });
-  private right = h('div', { class: 'slot right' });
-  private name = h('div', { class: 'speaker' });
-  private text = h('p', { class: 'line' });
-  private next = h('button', { class: 'btn small next', type: 'button' }, 'NEXT ▸');
-  constructor() {
-    this.el = h('section', { class: 'dialog', 'aria-live': 'polite' },
-      this.left,
-      h('div', { class: 'bubble' }, this.name, this.text, h('div', { class: 'bubble-foot' }, this.next)),
-      this.right);
-  }
-  private place(who: Who, pose: string) {
-    const side = who === 'peep' || who === 'gus' ? this.right : this.left;
-    const other = side === this.left ? this.right : this.left;
-    const cur = side.firstElementChild as HTMLElement | null;
-    if (!cur || cur.dataset.who !== who || cur.dataset.pose !== pose) {
-      const f = h('figure', { class: `frame ${who} ${cur && cur.dataset.who === who ? 'swap' : 'enter'}` }, castPortrait(who, pose, 6),
-        h('figcaption', {}, CAST[who].name));
-      f.dataset.who = who; f.dataset.pose = pose;
-      side.replaceChildren(f);
-    }
-    side.classList.add('active'); other.classList.remove('active');
-    this.el.dataset.side = side === this.left ? 'left' : 'right';
-    this.el.dataset.who = who;
-    this.name.innerHTML = `<span class="prompt">${CAST[who].handle}@glasstown</span><span class="sep">:~$</span>`;
-    this.name.className = `speaker ${who}`;
-  }
-  /** Show one character without speaking (e.g. to set a pose). */
-  pose(who: Who, pose: string) { this.place(who, pose); }
-  clearSide(side: 'left' | 'right') { (side === 'left' ? this.left : this.right).replaceChildren(); }
-
-  async say(lines: Line[], finalLabel = 'NEXT ▸'): Promise<void> {
-    for (let i = 0; i < lines.length; i++) {
-      const { who, pose, text } = lines[i];
-      this.place(who, pose);
-      this.reveal();
-      this.next.textContent = i === lines.length - 1 ? finalLabel : 'NEXT ▸';
-      await this.type(text);
-      await this.wait();
-    }
-  }
-  /** When the dialogue is not pinned (phones), bring it back into view as a character speaks. */
-  private reveal() {
-    if (getComputedStyle(this.el).position === 'sticky') return;
-    const r = this.el.getBoundingClientRect();
-    if (r.top < 56 || r.bottom > innerHeight) this.el.scrollIntoView({ behavior: reduced() ? 'auto' : 'smooth', block: 'start' });
-  }
-  private type(text: string): Promise<void> {
-    return new Promise((resolve) => {
-      this.text.innerHTML = '';
-      const html = text; // lines may contain <b>/<code>; reveal by characters of plain text
-      const tmp = h('span', { html }); const plain = tmp.textContent ?? '';
-      if (reduced()) { this.text.innerHTML = html; resolve(); return; }
-      let n = 0, done = false;
-      const finish = () => { if (done) return; done = true; clearInterval(t); this.text.innerHTML = html; this.el.removeEventListener('click', finish); resolve(); };
-      const t = setInterval(() => {
-        n += 2; this.text.textContent = plain.slice(0, n);
-        if (n % 6 === 0) sfx.tick();
-        if (n >= plain.length) finish();
-      }, 28);
-      this.el.addEventListener('click', finish);
-    });
-  }
-  private wait(): Promise<void> {
-    return new Promise((resolve) => {
-      this.next.hidden = false; this.next.focus({ preventScroll: true });
-      const go = (e?: Event) => { e?.stopPropagation(); this.next.removeEventListener('click', go); document.removeEventListener('keydown', key); this.next.hidden = true; sfx.pop(); resolve(); };
-      const key = (e: KeyboardEvent) => { if ((e.key === 'Enter' || e.key === ' ') && !(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)) { e.preventDefault(); go(); } };
-      this.next.addEventListener('click', go);
-      document.addEventListener('keydown', key);
-    });
-  }
-}
-
 // ---------- buttons, toasts ----------
 export function btn(label: string, onclick: () => void, cls = ''): HTMLButtonElement {
   return h('button', { class: `btn ${cls}`, type: 'button', onclick: () => { sfx.pop(); onclick(); } }, label);
-}
-
-export function waitClick(el: HTMLElement): Promise<void> {
-  return new Promise((r) => el.addEventListener('click', () => r(), { once: true }));
 }
 
 export function toast(msg: string, kind: 'good' | 'bad' | 'info' = 'info'): void {
@@ -161,51 +65,10 @@ export function toast(msg: string, kind: 'good' | 'bad' | 'info' = 'info'): void
   setTimeout(() => t.remove(), 2700);
 }
 
-// ---------- quiz ----------
-export type Q = { q: string; options: string[]; answer: number; why: string };
-
-export function quiz(host: HTMLElement, qs: Q[]): Promise<void> {
-  return new Promise((resolve) => {
-    const box = h('section', { class: 'panel quiz' }, h('div', { class: 'label' }, 'Checkpoint'));
-    host.append(box);
-    let i = 0;
-    const render = () => {
-      const { q, options, answer, why } = qs[i];
-      const list = h('div', { class: 'opts' });
-      const note = h('p', { class: 'why', hidden: true });
-      const body = h('div', { class: 'qbody' },
-        h('p', { class: 'q' }, h('span', { class: 'qn' }, `${i + 1}/${qs.length}`), ' ', q), list, note);
-      options.forEach((o, k) => {
-        const b = h('button', { class: 'opt', type: 'button' }, o);
-        b.addEventListener('click', () => {
-          if (k === answer) {
-            sfx.ding(); b.classList.add('right');
-            list.querySelectorAll('button').forEach((x) => ((x as HTMLButtonElement).disabled = true));
-            note.hidden = false; note.innerHTML = `✓ ${why}`;
-            const nb = btn(i < qs.length - 1 ? 'Next question' : 'Finish level', () => { i++; if (i < qs.length) render(); else { box.remove(); resolve(); } }, 'primary');
-            body.append(nb); nb.focus({ preventScroll: true });
-          } else {
-            sfx.buzz(); b.classList.add('wrong'); b.disabled = true;
-          }
-        });
-        list.append(b);
-      });
-      box.querySelector('.qbody')?.remove();
-      box.append(body);
-      box.scrollIntoView({ behavior: reduced() ? 'auto' : 'smooth', block: 'start' });
-    };
-    render();
-  });
-}
-
-export function scrollTo(el: HTMLElement): void {
-  el.scrollIntoView({ behavior: reduced() ? 'auto' : 'smooth', block: 'start' });
-}
-
 // Random-looking strings for the simulated chain. Never real addresses.
 const B32 = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
 const B58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-export function fake(prefix: string, len: number, alpha = B32): string {
+function fake(prefix: string, len: number, alpha = B32): string {
   let s = prefix; for (let i = 0; i < len; i++) s += alpha[Math.floor(Math.random() * alpha.length)];
   return s;
 }

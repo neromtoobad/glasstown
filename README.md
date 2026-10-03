@@ -1,37 +1,37 @@
-# GLASSTOWN · a Zcash initiation
+# GLASSTOWN · learn Zcash privacy
 
-**Every wallet is glass. Get out.**
+**Learn to use Zcash privately, in about 10 minutes.**
 
-Glasstown is a terminal-style learning game. It takes a total beginner from zero to their **first real shielded Zcash transaction** in eight nodes, and one of those nodes is a playable arcade game.
+Glasstown is a short, beginner-friendly learning game. It takes someone who knows nothing about Zcash to their **first private (shielded) payment**. Each level is a few cards: a character says one thing, you do one small action, then you continue. One level is a real arcade game.
 
 Built for the ZECATHON Wildcard onboarding bounty (@zksnarks_).
 
-## The cast
-All characters are 26×26 pixel identities: hooded, a void where the face would be, glowing eyes, pixels dissolving off the back edge. They are drawn procedurally in the browser.
-- **ZERO**: your guide out of Glasstown.
-- **WATCHER**: chain analytics. A glass head with a red lens that reads anything transparent.
-- **KEEPER**: guards the vault and is strict about your 24 words.
-- **SUPPORT ✓**: a verified badge, very helpful. Do not trust.
+It uses one picture throughout: **public = glass** (anyone can see) and **private = dark** (only you can see). *Shield* means public → private. *Unshield* means private → public.
 
-## Nodes
-| # | Node | Covers | What you do |
-|---|---|---|---|
-| 01 | Watcher's Desk | Why privacy | **Sit in the Watcher's chair.** Profile a transparent wallet in 60 seconds, then watch the trail vanish when the subject goes shielded. |
-| 02 | The Vault | Wallet setup | Pick a wallet for your device (Zodl or Zingo!), sort seed-storage habits, block a fake support DM. |
-| 03 | The Market | Getting ZEC | Swap in Zodl, an exchange, or a friend: see what each route leaks. |
-| 04 | Glass or Dark | Addresses | Sort t1 / u1 / zs1 / tex1 addresses, then use a real in-browser address checker (checksum only). |
-| 05 | **Dark Pool** | Shielding | **Arcade game.** Grab ZEC in the lit glass district while the Watcher's drones hunt you. Carrying coins makes you visible from further away. Reach the dark pool (Ironwood) to shield. |
-| 06 | Sealed Mail | Send & receive | Type a memo and see ciphertext on the public chain next to plaintext in the recipient's wallet. Build a ZIP-321 payment QR. |
-| 07 | The Exit | Unshielding | Beat the round-trip match (same amount, too soon), learn TEX addresses, and decrypt six habits. |
-| 08 | Initiation | The real thing | Work through a checklist in your own wallet, paste the txid, and **the Watcher inspects the real transaction and finds nothing.** |
+## Levels
+| # | Level | What you do |
+|---|---|---|
+| 1 | Why privacy | Tap a public wallet’s payments and watch the Watcher learn your job, home and name. Then try again with a shielded wallet: nothing. |
+| 2 | Get a wallet | Pick your device and get Zodl (or Zingo! on a computer). Find the safe places for your 24 words. Block a fake “support” message. |
+| 3 | Get ZEC | Your two addresses (private u…, public t…). Two easy ways to buy: swap in the app, or use an exchange and tap Shield. |
+| 4 | Go private | **Dark Pool**, an arcade game. Pick up coins and carry them into the dark pool before the Watcher’s drones catch you. |
+| 5 | Send & receive | Send with a secret note. See what the Watcher sees next to what your friend sees. Receive with a QR code. |
+| 6 | Cash out | Unshield without giving yourself away: a different amount, at a later time. |
+| 7 | Your first private payment | A 4-step checklist in your real wallet. Then paste the transaction ID and the Watcher tries, and fails, to read it. |
 
-Your own 26×26 identity renders one trait per node. It ends as a share card: identity, traits, and a redacted receipt (Amount ████ · To ████ · Memo ████). Like a Wordle grid, it brags without leaking anything: no txid, no address, no amount.
+Each level ends with one quiz question and a “You learned” recap, and unlocks a piece of your 26×26 pixel identity in the zkSNARKs portrait style. The finish is a share card that shows nothing private.
+
+## Cast
+All four are 26×26 pixel identities drawn in the browser.
+- **ZERO**: your guide.
+- **WATCHER**: reads anything public.
+- **KEEPER**: guards your 24 words.
+- **SUPPORT ✓**: the scammer.
 
 ## Privacy
 - No wallet connection, no keys, and it **never asks for your seed**.
 - No analytics, no cookies, no third-party scripts, and self-hosted fonts.
-- Address checks run in your browser and only verify the checksum.
-- Node 08's check is **optional**. It asks the public Blockchair API about one txid, directly from your browser, and the page says so first.
+- Level 7’s check is **optional**. It asks the public Blockchair API about one txid, directly from your browser, and the page says so first.
 - Progress and your identity seed stay in your browser's `localStorage`.
 
 ## Accuracy
