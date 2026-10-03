@@ -157,7 +157,7 @@ export const LESSONS: LessonDef[] = [
     n: 4, title: 'Go private', blurb: 'Shielding, as a game.',
     steps: [
       { who: 'zee', pose: 'shield', text: '<b>Shielding</b> moves your coins from <b>public</b> to <b>private</b>. Let’s practise with a game.' },
-      { who: 'zee', pose: 'point', text: 'Pick up the gold coins, then carry them into the <b>dark pool</b> on the right. Coins in the pool are private. Avoid the <b>red-eyed drones</b>.', wait: true,
+      { who: 'zee', pose: 'point', text: 'Pick up the gold coins and carry them into the <b>dark pool</b>. Coins in the pool are private. Avoid the <b>red-eyed drones</b>. Tip: tap <b>Full screen</b> for a bigger board.', wait: true,
         widget: ({ area, done, say }) => {
           const host = h('div', { class: 'game-host' });
           area.append(host);

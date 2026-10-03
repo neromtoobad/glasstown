@@ -44,6 +44,7 @@ code, .mono { font-family: var(--mono); word-break: break-all; }
 .foot { max-width: 1000px; margin: 0 auto; padding: 20px clamp(16px, 3vw, 28px) 44px; color: var(--dim); font-size: .85rem; border-top: 1px solid var(--edge); }
 
 /* ---------- controls ---------- */
+.btn, .opt, .choice, .safe-opt, .pay, .level, .node a { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 10px 20px; font: 700 1rem var(--sans); color: var(--text); background: #fff; border: 1.5px solid var(--edge-2); border-radius: 14px; cursor: pointer; text-decoration: none; box-shadow: 0 2px 0 var(--edge-2); transition: transform .06s, box-shadow .06s, background .15s, border-color .15s; }
 .btn:hover { border-color: var(--brand); }
 .btn:active { transform: translateY(2px); box-shadow: 0 0 0 var(--edge-2); }
@@ -274,17 +275,20 @@ code, .mono { font-family: var(--mono); word-break: break-all; }
 /* ---------- game ---------- */
 .game-host { display: flex; flex-direction: column; gap: 10px; }
 .game { display: flex; flex-direction: column; gap: 10px; }
-.game-hud { display: flex; flex-wrap: wrap; gap: 8px; font-size: .88rem; color: var(--dim); }
-.game-hud span { background: #fff; border: 1px solid var(--edge); border-radius: 999px; padding: 4px 12px; }
+.game-top { display: flex; align-items: center; gap: 10px; }
+.game-hud { display: flex; flex-wrap: wrap; gap: 8px; font-size: .88rem; color: var(--dim); flex: 1; }
+.game-hud span { background: #fff; border: 1px solid var(--edge); border-radius: 999px; padding: 4px 12px; white-space: nowrap; }
 .game-hud b { color: var(--text); font-family: var(--mono); }
 .game-hud .exposed { background: var(--glass-l); border-color: var(--glass-edge); } .game-hud .exposed b { color: var(--glass); }
 .game-hud .ok { background: var(--ink); border-color: var(--ink); color: var(--ink-text); } .game-hud .ok b { color: var(--brand-hi); }
-.game-stage { position: relative; border-radius: 18px; overflow: hidden; box-shadow: var(--shadow); border: 1px solid var(--edge-2); }
-.game-cv { width: 100%; height: auto; aspect-ratio: 320 / 192; display: block; background: #eef6fa; touch-action: none; cursor: crosshair; }
+.game-hud .hearts { color: var(--red); letter-spacing: .15em; font-family: var(--sans); }
+.game-close { display: none; width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--edge-2); background: #fff; font-size: 1.1rem; cursor: pointer; flex: none; }
+.game-stage { position: relative; border-radius: 18px; overflow: hidden; box-shadow: var(--shadow); border: 1px solid var(--edge-2); align-self: stretch; display: flex; justify-content: center; background: #eef6fa; }
+.game-cv { display: block; background: #eef6fa; touch-action: none; cursor: crosshair; -webkit-user-select: none; user-select: none; }
 .game-cv:focus { outline: none; }
 .game-overlay { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; padding: 16px; background: rgba(246,247,242,.55); backdrop-filter: blur(3px); }
 .game-overlay.show { display: flex; animation: rise .25s ease both; }
-.go-card { background: #fff; border-radius: 20px; padding: 20px 24px; box-shadow: 0 16px 40px rgba(21,34,27,.18); text-align: center; max-width: 380px; width: 100%; }
+.go-card { background: #fff; border-radius: 20px; padding: 20px 22px; box-shadow: 0 16px 40px rgba(21,34,27,.18); text-align: center; max-width: 380px; width: 100%; }
 .go-kicker { font: 700 .78rem var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--brand); margin-bottom: 10px; }
 .go-rules { list-style: none; padding: 0; margin: 0 0 16px; display: grid; gap: 9px; text-align: left; font-size: .95rem; }
 .go-rules li { display: flex; gap: 10px; align-items: center; }
@@ -292,14 +296,24 @@ code, .mono { font-family: var(--mono); word-break: break-all; }
 .go-rules .r-coin { background: radial-gradient(circle at 35% 35%, #fff2b0, #ffd23f 50%, #d99a0b); box-shadow: inset 0 0 0 1.5px #b37a06; }
 .go-rules .r-pool { border-radius: 6px; background: linear-gradient(#0f1d16, #030605); box-shadow: 0 0 0 1.5px #5dff8f, 0 0 8px rgba(93,255,143,.6); }
 .go-rules .r-drone { background: radial-gradient(circle, #ff2a2a 0 22%, #f2f5f6 24% 46%, #2b3a42 48%); }
-.go-card small { display: block; margin-top: 8px; color: var(--dim); font-size: .82rem; }
+.go-actions { display: flex; flex-direction: column; gap: 8px; align-items: stretch; }
+.go-card small { display: block; margin-top: 10px; color: var(--dim); font-size: .82rem; }
 .go-big { font: 800 2.6rem var(--sans); color: var(--brand-d); line-height: 1.1; }
 .go-big span { font-size: 1.1rem; color: var(--dim); }
 .go-sub { color: var(--dim); margin-bottom: 12px; }
 .go-stats { display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; font-size: .9rem; color: var(--dim); margin-bottom: 14px; }
 .go-stats b { color: var(--text); font-family: var(--mono); }
 .go-stats .lost b { color: var(--red-d); }
-.game-help { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px; font-size: .85rem; color: var(--dim); }
+.game-help { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; font-size: .85rem; color: var(--dim); }
+.fs-btn { min-height: 38px; padding: 6px 14px; font-size: .9rem; border-radius: 12px; }
+/* full screen: the game gets the whole viewport */
+.game.focus { position: fixed; inset: 0; z-index: 1000; background: var(--bg); padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left)); gap: 8px; }
+.game.focus .game-close { display: grid; place-items: center; }
+.game.focus .game-stage { flex: 1; min-height: 0; align-items: center; border: 0; box-shadow: none; background: transparent; overflow: visible; }
+.game.focus .game-cv { border-radius: 16px; box-shadow: var(--shadow); }
+.game.focus .game-help { display: none; }
+.game.focus .game-hud span { font-size: .82rem; padding: 4px 10px; }
+html.game-lock, html.game-lock body { overflow: hidden; overscroll-behavior: none; }
 .game-page h1 { margin-top: 10px; }
 .game-result { margin-top: 14px; }
 
@@ -332,6 +346,31 @@ code, .mono { font-family: var(--mono); word-break: break-all; }
   .idea { grid-template-columns: 1fr; }
 }
 @media (max-width: 420px) { .fan { zoom: .72; } }
+@media (max-width: 600px) {
+  .main { padding: 18px 14px 32px; }
+  .card { padding: 16px; border-radius: 20px; }
+  .lesson-top { flex-wrap: nowrap; font-size: .85rem; gap: 8px; }
+  .back { font-size: 0; } .back::before { content: '←'; font-size: 1.2rem; }
+  .lesson-name { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; display: block; }
+  .lesson-icon { display: none; }
+  .steps-bar { margin: 10px 0 14px; }
+  .speech { display: block; position: relative; padding-top: 14px; }
+  .speech .frame { position: absolute; left: 10px; top: 0; width: 50px; padding: 3px; border-radius: 12px; z-index: 1; }
+  .speech-body { padding: 14px 14px 14px; border-radius: 18px; }
+  .speech-body .speaker { margin-left: 52px; margin-bottom: 10px; }
+  .line { font-size: 1.05rem; }
+  .area { margin-top: 16px; }
+  .area .row-actions .btn { flex: 1; }
+  .field, .field.mono { font-size: 16px; }
+  .app-card .qr-card { display: none; }
+  .opt, .choice, .safe-opt { padding: 14px; }
+  .inspect-card dl, .view dl { grid-template-columns: 96px 1fr; }
+  .cta-row { padding-bottom: max(18px, env(safe-area-inset-bottom)); }
+  .topbar { padding: 10px 14px; }
+  .icon-btn { padding: 6px 9px; }
+  .game-hud { font-size: .8rem; gap: 6px; } .game-hud span { padding: 3px 9px; }
+  .graduate .row-actions .btn { flex: 1 1 100%; }
+}
 @media (max-width: 760px) {
   body { font-size: 16px; }
   .how { grid-template-columns: 1fr; }
@@ -361,3 +400,4 @@ code, .mono { font-family: var(--mono); word-break: break-all; }
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
 .game-hud .hearts { color: var(--red); letter-spacing: .15em; font-family: var(--sans); }
+.card:has(.game) .cta-row { position: static; background: none; margin: 18px 0 0; padding: 0; }
