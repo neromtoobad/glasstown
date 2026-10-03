@@ -18,6 +18,7 @@ export type State = {
   verified: 'shielded' | 'self' | null;
   seed: string;            // random, only used to draw the pixel identity
   muted: boolean;
+  best?: number;           // Dark Pool high score (ZEC shielded)
 };
 
 const KEY = 'glasstown:v1';

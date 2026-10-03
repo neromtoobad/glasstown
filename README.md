@@ -1,40 +1,48 @@
-# Glasstown
+# GLASSTOWN · a Zcash initiation
 
-**Everyone can see your money. Let's fix that.**
+**Every wallet is glass. Get out.**
 
-Glasstown is a character-driven learning game. It takes a total beginner from zero to their **first real shielded Zcash transaction** in eight short levels, about 10 minutes of play.
+Glasstown is a terminal-style learning game. It takes a total beginner from zero to their **first real shielded Zcash transaction** in eight nodes, and one of those nodes is a playable arcade game.
 
-It was built for the ZECATHON Wildcard onboarding bounty (@zksnarks_).
+Built for the ZECATHON Wildcard onboarding bounty (@zksnarks_).
 
-| # | Level | Covers | What you do |
+## The cast
+All characters are 26×26 pixel identities: hooded, a void where the face would be, glowing eyes, pixels dissolving off the back edge. They are drawn procedurally in the browser.
+- **ZERO**: your guide out of Glasstown.
+- **WATCHER**: chain analytics. A glass head with a red lens that reads anything transparent.
+- **KEEPER**: guards the vault and is strict about your 24 words.
+- **SUPPORT ✓**: a verified badge, very helpful. Do not trust.
+
+## Nodes
+| # | Node | Covers | What you do |
 |---|---|---|---|
-| 1 | Peep's Desk | Why privacy | **Play the chain watcher.** Dox a transparent wallet in 60 seconds, then fail when it goes shielded. |
-| 2 | Moss's Vault | Wallet setup | Pick a wallet for your device (Zodl or Zingo!), sort seed-storage habits, block a fake "support" DM. |
-| 3 | The Market | Getting ZEC | Swap in Zodl, use an exchange, or get it from a friend, and see what each route leaks. |
-| 4 | Glass or Fog | Addresses | Sort t1 / u1 / zs1 / tex1 addresses, then use a real in-browser address checker (checksum only). |
-| 5 | The Shield | Shielding | Move coins from a glass jar into the Ironwood pool and watch what Peep can still see. |
-| 6 | Moth Mail | Send & receive | Type a memo and see ciphertext on the public chain next to plaintext in the recipient's wallet. Make a ZIP-321 payment QR. |
-| 7 | The Exit | Unshielding | Beat Peep's round-trip trap (same amount, too soon), then learn TEX addresses and good habits. |
-| 8 | Your First Shield | The real thing | Follow a checklist in your own wallet, paste the txid, and **Peep inspects the real transaction and finds nothing.** |
+| 01 | Watcher's Desk | Why privacy | **Sit in the Watcher's chair.** Profile a transparent wallet in 60 seconds, then watch the trail vanish when the subject goes shielded. |
+| 02 | The Vault | Wallet setup | Pick a wallet for your device (Zodl or Zingo!), sort seed-storage habits, block a fake support DM. |
+| 03 | The Market | Getting ZEC | Swap in Zodl, an exchange, or a friend: see what each route leaks. |
+| 04 | Glass or Dark | Addresses | Sort t1 / u1 / zs1 / tex1 addresses, then use a real in-browser address checker (checksum only). |
+| 05 | **Dark Pool** | Shielding | **Arcade game.** Grab ZEC in the lit glass district while the Watcher's drones hunt you. Carrying coins makes you visible from further away. Reach the dark pool (Ironwood) to shield. |
+| 06 | Sealed Mail | Send & receive | Type a memo and see ciphertext on the public chain next to plaintext in the recipient's wallet. Build a ZIP-321 payment QR. |
+| 07 | The Exit | Unshielding | Beat the round-trip match (same amount, too soon), learn TEX addresses, and decrypt six habits. |
+| 08 | Initiation | The real thing | Work through a checklist in your own wallet, paste the txid, and **the Watcher inspects the real transaction and finds nothing.** |
 
-At the end you get a 26×26 pixel "shielded identity" card. Like a Wordle grid, it brags without spoiling anything: no txid, no address, no amount.
+Your own 26×26 identity renders one trait per node. It ends as a share card: identity, traits, and a redacted receipt (Amount ████ · To ████ · Memo ████). Like a Wordle grid, it brags without leaking anything: no txid, no address, no amount.
 
 ## Privacy
 - No wallet connection, no keys, and it **never asks for your seed**.
-- No analytics, no cookies and no third-party scripts. Fonts are self-hosted.
+- No analytics, no cookies, no third-party scripts, and self-hosted fonts.
 - Address checks run in your browser and only verify the checksum.
-- Level 8's transaction check is **optional**. It asks the public Blockchair API about one txid, directly from your browser. The page says so before you use it.
-- Progress is stored only in your browser's `localStorage`.
+- Node 08's check is **optional**. It asks the public Blockchair API about one txid, directly from your browser, and the page says so first.
+- Progress and your identity seed stay in your browser's `localStorage`.
 
 ## Accuracy
-Facts were checked on 3 Oct 2026 against Zodl's help center, the ZIPs and Zcash community sources. Sources are listed in the game at `#/sources`. Key points:
+Facts were checked on 3 Oct 2026 against Zodl's help center, the ZIPs and Zcash community sources. Sources are listed in-game at `#/sources`.
 - Zashi is now **Zodl**.
 - **Ironwood** (NU6.3) is the active shielded pool, and Orchard is exit-only.
-- Zodl recovery phrases are 24 words plus a birthday height.
-- Zodl needs 10 confirmations before funds are spendable.
+- A recovery phrase is 24 words plus the wallet birthday height.
+- Zodl waits for 10 confirmations before new funds are spendable.
 - The minimum fee is 0.0001 ZEC (ZIP-317).
 - Memos are up to 512 bytes.
-- Binance uses TEX addresses (ZIP-320).
+- TEX addresses (ZIP-320) are used by exchanges such as Binance.
 
 ## Run it
 ```bash
@@ -42,11 +50,9 @@ npm install
 npm run dev     # http://localhost:5173
 npm run build   # static site in dist/
 ```
-Built with Vite and vanilla TypeScript. Dependencies: `@scure/base` and `@noble/hashes` (address checksums, base64url), `qrcode-generator`, and `@fontsource` fonts.
+Built with Vite and vanilla TypeScript, with canvas for the portraits and the arcade game and Web Audio for sound. Dependencies:
+- `@scure/base` and `@noble/hashes`: address checksums and base64url
+- `qrcode-generator`
+- `@fontsource/jetbrains-mono`
 
-## Credits
-- Characters and town art are generated images (Higgsfield), cut into sprites locally with `tools/cut.cjs`.
-- Sound is synthesized live with Web Audio.
-- Independent community entry, not affiliated with Zodl, ECC, the Zcash Foundation or zkSNARKs. Not financial advice.
-
-MIT licensed.
+Independent community entry. Not affiliated with Zodl, ECC, the Zcash Foundation or zkSNARKs. Not financial advice. MIT licensed.
