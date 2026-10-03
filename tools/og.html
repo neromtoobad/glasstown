@@ -1,34 +1,34 @@
 <!doctype html>
 <html><head><meta charset="utf-8">
-<link rel="stylesheet" href="/node_modules/@fontsource/jetbrains-mono/400.css">
+<link rel="stylesheet" href="/node_modules/@fontsource/inter/800.css">
+<link rel="stylesheet" href="/node_modules/@fontsource/inter/600.css">
 <link rel="stylesheet" href="/node_modules/@fontsource/jetbrains-mono/700.css">
 <style>
-  html, body { margin: 0; background: #000; }
-  .og { width: 1200px; height: 630px; position: relative; overflow: hidden; color: #c8ffdc; font-family: 'JetBrains Mono', monospace;
-    background-color: #000; background-image: linear-gradient(rgba(93,255,143,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(93,255,143,.05) 1px, transparent 1px); background-size: 24px 24px; }
-  .frame { position: absolute; inset: 24px; border: 2px solid #23462f; }
-  .copy { position: absolute; left: 72px; top: 76px; width: 640px; }
-  .kicker { font-size: 18px; letter-spacing: .28em; color: #4f9e70; }
-  .wm { color: #fff; margin: 22px 0 26px; width: 600px; }
+  html, body { margin: 0; }
+  .og { width: 1200px; height: 630px; position: relative; overflow: hidden; color: #15221b; font-family: Inter, sans-serif;
+    background: radial-gradient(circle at 1px 1px, rgba(21,34,27,.09) 1px, transparent 0) 0 0 / 22px 22px, #f6f7f2; }
+  .copy { position: absolute; left: 72px; top: 70px; width: 600px; }
+  .kicker { font: 700 17px 'JetBrains Mono', monospace; letter-spacing: .14em; color: #12a15a; }
+  .wm { color: #15221b; margin: 22px 0 24px; width: 520px; }
   .wm svg { width: 100%; height: auto; display: block; }
-  .lede { font-size: 30px; line-height: 1.4; color: #fff; margin: 0 0 22px; font-weight: 700; }
-  .lede span { color: #5dff8f; }
-  .meta { font-size: 15px; letter-spacing: .08em; color: #4f9e70; white-space: nowrap; }
-  .meta b { color: #5dff8f; font-weight: 400; }
-  .cast { position: absolute; right: 64px; top: 70px; display: grid; grid-template-columns: repeat(2, 196px); gap: 14px; }
-  .cast canvas { width: 196px; height: 196px; image-rendering: pixelated; border: 2px solid #23462f; background: #07100b; display: block; }
-  .cast .red { border-color: #4a1f1f; }
-  .tag { position: absolute; left: 72px; bottom: 60px; font-size: 16px; letter-spacing: .2em; color: #5dff8f; }
+  h1 { font-size: 52px; line-height: 1.08; letter-spacing: -.02em; margin: 0 0 22px; font-weight: 800; }
+  h1 span { color: #12a15a; }
+  .pills { display: flex; gap: 10px; flex-wrap: wrap; }
+  .pill { font: 600 18px Inter, sans-serif; padding: 9px 16px; border-radius: 999px; background: #fff; border: 1.5px solid #d3d9cd; }
+  .pill.dark { background: #0b1410; color: #5dff8f; border-color: #0b1410; }
+  .cast { position: absolute; right: 64px; top: 66px; display: grid; grid-template-columns: repeat(2, 206px); gap: 16px; }
+  .tile { background: #0b1410; padding: 10px; border-radius: 24px; box-shadow: 0 14px 30px rgba(11,20,16,.22); }
+  .tile:nth-child(1) { transform: rotate(-3deg); } .tile:nth-child(2) { transform: rotate(2deg); } .tile:nth-child(3) { transform: rotate(2deg); } .tile:nth-child(4) { transform: rotate(-2deg); }
+  .tile canvas { width: 186px; height: 186px; image-rendering: pixelated; display: block; border-radius: 14px; }
 </style></head>
-<body><div class="og"><div class="frame"></div>
+<body><div class="og">
   <div class="copy">
     <div class="kicker">LEARN ZCASH PRIVACY · ZECATHON</div>
     <div class="wm" id="wm"></div>
-    <p class="lede">Learn to use Zcash privately<br><span>in about 10 minutes.</span></p>
-    <div class="meta">7 LEVELS · 1 GAME · <b>YOUR FIRST PRIVATE PAYMENT</b></div>
+    <h1>Learn to use Zcash privately <span>in about 10 minutes.</span></h1>
+    <div class="pills"><span class="pill">7 short levels</span><span class="pill">1 game</span><span class="pill dark">your first private payment</span></div>
   </div>
   <div class="cast" id="cast"></div>
-  <div class="tag">■ NO EXPERIENCE NEEDED · NEVER ASKS FOR YOUR 24 WORDS</div>
 </div>
 <canvas id="fav" style="display:none"></canvas>
 <script type="module">
@@ -36,8 +36,8 @@ import { pixelText } from '/src/font.ts';
 import { castPortrait, paint, portraitGrid, CAST } from '/src/identity.ts';
 document.getElementById('wm').append(pixelText('GLASSTOWN', 12));
 const cast = document.getElementById('cast');
-for (const [w, p] of [['zee', 'wave'], ['peep', 'peer'], ['moss', 'key'], ['gus', 'smile']]) { const c = castPortrait(w, p, 8); if (w === 'peep' || w === 'gus') c.classList.add('red'); cast.append(c); }
+for (const [w, p] of [['zee', 'wave'], ['peep', 'peer'], ['moss', 'key'], ['gus', 'smile']]) { const t = document.createElement('div'); t.className = 'tile'; t.append(castPortrait(w, p, 8)); cast.append(t); }
 const fav = document.getElementById('fav');
-paint(fav, portraitGrid(CAST.zee.traits, CAST.zee.seed, 'idle', 8), 8, '#000');
+paint(fav, portraitGrid(CAST.zee.traits, CAST.zee.seed, 'idle', 8), 8, '#0b1410');
 window.__ready = true;
 </script></body></html>

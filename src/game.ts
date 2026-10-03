@@ -95,7 +95,7 @@ export function darkPool(host: HTMLElement, opts: { seconds?: number; onEnd: (r:
     // coins
     for (let i = coins.length - 1; i >= 0; i--) {
       const c = coins[i]; c.t += dt;
-      if (Math.hypot(c.x - me.x, c.y - me.y) < 7) { me.carry = +(me.carry + c.v).toFixed(2); coins.splice(i, 1); sfx.ding(); pop(c.x, c.y - 6, `+${c.v} public`, '#9fc6d4'); }
+      if (Math.hypot(c.x - me.x, c.y - me.y) < 7) { me.carry = +(me.carry + c.v).toFixed(2); coins.splice(i, 1); sfx.ding(); pop(c.x, c.y - 6, `+${c.v} public`, '#0e7490'); }
     }
     spawnT += dt; if (spawnT > 1.6 && coins.length < 6) { spawnT = 0; addCoin(); }
 
@@ -114,7 +114,7 @@ export function darkPool(host: HTMLElement, opts: { seconds?: number; onEnd: (r:
       if (!blocked({ x: d.x, y: ay }, 5) && !inPool({ x: d.x, y: ay })) d.y = ay; else d.ty = d.y - (vy / l) * 30;
       if (!hidden && me.inv <= 0 && dist < 7) {
         lives--; doxxed += me.carry;
-        pop(me.x, me.y - 8, me.carry > 0 ? `CAUGHT −${me.carry.toFixed(2)}` : 'CAUGHT', '#ff4d4d');
+        pop(me.x, me.y - 8, me.carry > 0 ? `CAUGHT −${me.carry.toFixed(2)}` : 'CAUGHT', '#e5484d');
         me.carry = 0; me.inv = 2.2; sfx.buzz(); trail.length = 0;
         me.x = POOL.x + POOL.w / 2; me.y = POOL.y + POOL.h / 2;
         if (lives <= 0) end();
@@ -130,11 +130,11 @@ export function darkPool(host: HTMLElement, opts: { seconds?: number; onEnd: (r:
   function px(x: number, y: number, w: number, h: number, c: string) { g.fillStyle = c; g.fillRect(Math.round(x), Math.round(y), w, h); }
   function draw(now: number) {
     // glass district: lit grid
-    px(0, 0, W, H, '#07110d');
-    g.fillStyle = '#0d2219';
+    px(0, 0, W, H, '#eef6fa');
+    g.fillStyle = '#dcebf2';
     for (let x = 0; x < W; x += 8) g.fillRect(x, 0, 1, H);
     for (let y = 0; y < H; y += 8) g.fillRect(0, y, W, 1);
-    for (const w of WALLS) { px(w.x, w.y, w.w, w.h, '#123a4a'); g.strokeStyle = '#9fc6d4'; g.globalAlpha = 0.55; g.strokeRect(w.x + 0.5, w.y + 0.5, w.w - 1, w.h - 1); g.globalAlpha = 1; px(w.x + 3, w.y + 3, 3, 3, '#ffd23f'); }
+    for (const w of WALLS) { px(w.x, w.y, w.w, w.h, '#cfe9f4'); g.strokeStyle = '#7fb8cf'; g.globalAlpha = 1; g.strokeRect(w.x + 0.5, w.y + 0.5, w.w - 1, w.h - 1); g.globalAlpha = 1; px(w.x + 3, w.y + 3, 3, 3, '#ffd23f'); }
     // dark pool: dithered void with drifting pixels
     px(POOL.x, POOL.y, POOL.w, POOL.h, '#000');
     for (let y = POOL.y; y < POOL.y + POOL.h; y += 2) for (let x = POOL.x + ((y / 2) % 2); x < POOL.x + POOL.w; x += 4) { g.fillStyle = '#04100a'; g.fillRect(x, y, 1, 1); }
@@ -144,24 +144,25 @@ export function darkPool(host: HTMLElement, opts: { seconds?: number; onEnd: (r:
     // coins
     for (const c of coins) { const b = Math.sin(c.t * 5) > 0 ? 0 : 1; const y0 = c.y - b; px(c.x - 3, y0 - 3, 6, 6, '#f4b728'); px(c.x - 2, y0 - 2, 4, 4, '#ffd23f'); px(c.x - 2, y0 - 2, 4, 1, '#7a5a10'); px(c.x, y0 - 1, 1, 1, '#7a5a10'); px(c.x - 1, y0, 1, 1, '#7a5a10'); px(c.x - 2, y0 + 1, 4, 1, '#7a5a10'); }
     // trail = the public record of a transparent wallet
-    for (let i = 0; i < trail.length; i++) { g.globalAlpha = (i / trail.length) * 0.6; px(trail[i].x - 1, trail[i].y - 1, 2, 2, '#9fc6d4'); } g.globalAlpha = 1;
+    for (let i = 0; i < trail.length; i++) { g.globalAlpha = (i / trail.length) * 0.6; px(trail[i].x - 1, trail[i].y - 1, 2, 2, '#3aa0c4'); } g.globalAlpha = 1;
     // drones
     for (const d of drones) {
       const chasing = d.chase > 0 && !inPool(me);
-      g.strokeStyle = chasing ? '#ff4d4d' : '#ff8a8a'; g.globalAlpha = chasing ? 0.5 : 0.18;
+      g.strokeStyle = chasing ? '#e5484d' : '#e5484d'; g.globalAlpha = chasing ? 0.55 : 0.22;
       g.beginPath(); g.arc(d.x, d.y, me.carry > 0 ? SIGHT_CARRY : SIGHT_EMPTY, 0, Math.PI * 2); g.stroke(); g.globalAlpha = 1;
-      if (chasing) { g.strokeStyle = '#ff4d4d'; g.setLineDash([3, 3]); g.beginPath(); g.moveTo(d.x, d.y); g.lineTo(me.x, me.y); g.stroke(); g.setLineDash([]); }
-      px(d.x - 4, d.y - 3, 8, 7, '#dfe8ea'); px(d.x - 3, d.y - 2, 6, 5, '#b9c7cc');
+      if (chasing) { g.strokeStyle = '#e5484d'; g.setLineDash([3, 3]); g.beginPath(); g.moveTo(d.x, d.y); g.lineTo(me.x, me.y); g.stroke(); g.setLineDash([]); }
+      px(d.x - 4, d.y - 3, 8, 7, '#2b3a42'); px(d.x - 3, d.y - 2, 6, 5, '#f2f5f6');
       const lx = Math.max(-1, Math.min(1, (me.x - d.x) / 30)), ly = Math.max(-1, Math.min(1, (me.y - d.y) / 30));
       px(d.x - 2 + lx, d.y - 1 + ly, 3, 3, chasing ? '#ff2a2a' : '#c0392b');
-      if (d.lost > 0) { g.fillStyle = '#ffd23f'; g.fillText('?', d.x - 2, d.y - 6); }
-      else if (chasing) { g.fillStyle = '#ff4d4d'; g.fillText('!', d.x - 1, d.y - 6); }
+      if (d.lost > 0) { g.fillStyle = '#a8730a'; g.fillText('?', d.x - 2, d.y - 6); }
+      else if (chasing) { g.fillStyle = '#e5484d'; g.fillText('!', d.x - 1, d.y - 6); }
     }
     // player: a tiny hooded identity
     const blink = me.inv > 0 && Math.floor(now / 100) % 2 === 0;
     if (!blink) {
       const hid = inPool(me);
       g.globalAlpha = hid ? 0.55 : 1;
+      if (!hid) { g.fillStyle = '#15221b'; g.fillRect(Math.round(me.x - 5), Math.round(me.y - 6), 10, 11); }
       px(me.x - 4, me.y - 5, 8, 9, pal.main); px(me.x - 4, me.y - 5, 3, 9, pal.light); px(me.x - 2, me.y - 3, 5, 4, '#050807');
       px(me.x - 1, me.y - 2, 1, 1, traits.eyeColor); px(me.x + 1, me.y - 2, 1, 1, traits.eyeColor);
       if (me.carry > 0 && !hid) { px(me.x - 1, me.y - 9, 3, 3, '#f4b728'); }
@@ -169,11 +170,11 @@ export function darkPool(host: HTMLElement, opts: { seconds?: number; onEnd: (r:
     }
     for (const p of pops) { g.globalAlpha = Math.min(1, p.t); g.fillStyle = p.color; g.fillText(p.text, p.x - p.text.length * 2.4, p.y); } g.globalAlpha = 1;
     if (!started) {
-      px(0, H / 2 - 18, W, 36, 'rgba(0,0,0,0.75)');
-      g.textAlign = 'center'; g.fillStyle = '#5dff8f'; g.fillText('TAP HERE OR PRESS AN ARROW KEY TO START', W / 2, H / 2 - 3);
-      g.fillStyle = '#c8ffdc'; g.fillText('coins you carry are public: the drones can see them', W / 2, H / 2 + 9); g.textAlign = 'left';
+      px(0, H / 2 - 18, W, 36, 'rgba(255,255,255,0.9)');
+      g.textAlign = 'center'; g.fillStyle = '#0b7a43'; g.fillText('TAP HERE OR PRESS AN ARROW KEY TO START', W / 2, H / 2 - 3);
+      g.fillStyle = '#15221b'; g.fillText('coins you carry are public: the drones can see them', W / 2, H / 2 + 9); g.textAlign = 'left';
     }
-    hud.innerHTML = `<span>Time <b>${Math.ceil(time)}s</b></span><span class="${me.carry > 0 ? 'exposed' : ''}">Carrying (public) <b>${me.carry.toFixed(2)}</b></span><span class="ok">Hidden in pool (private) <b>${shielded.toFixed(2)}</b></span><span>Lives <b>${'■'.repeat(Math.max(0, lives))}${'□'.repeat(3 - Math.max(0, lives))}</b></span>`;
+    hud.innerHTML = `<span>Time <b>${Math.ceil(time)}s</b></span><span class="${me.carry > 0 ? 'exposed' : ''}">Carrying (public) <b>${me.carry.toFixed(2)}</b></span><span class="ok">Hidden in pool (private) <b>${shielded.toFixed(2)}</b></span><span>Lives <b class="hearts">${'♥'.repeat(Math.max(0, lives))}${'♡'.repeat(3 - Math.max(0, lives))}</b></span>`;
   }
 
   let raf = 0;
@@ -199,11 +200,11 @@ export function darkPool(host: HTMLElement, opts: { seconds?: number; onEnd: (r:
     state.best = +best.toFixed(2); save();
     sfx.fanfare();
     draw(performance.now());
-    g.fillStyle = 'rgba(0,0,0,0.82)'; g.fillRect(0, H / 2 - 30, W, 60);
+    g.fillStyle = 'rgba(255,255,255,0.93)'; g.fillRect(0, H / 2 - 30, W, 60);
     g.textAlign = 'center'; g.font = '10px "JetBrains Mono", monospace';
-    g.fillStyle = '#ffffff'; g.fillText(lives <= 0 ? 'CAUGHT! GAME OVER' : 'TIME UP!', W / 2, H / 2 - 10);
-    g.fillStyle = '#5dff8f'; g.fillText(`HIDDEN IN THE POOL: ${shielded.toFixed(2)} ZEC`, W / 2, H / 2 + 6);
-    g.fillStyle = '#ff4d4d'; g.font = '8px "JetBrains Mono", monospace'; g.fillText(`LOST TO THE WATCHER: ${doxxed.toFixed(2)} ZEC`, W / 2, H / 2 + 20); g.textAlign = 'left';
+    g.fillStyle = '#15221b'; g.fillText(lives <= 0 ? 'CAUGHT! GAME OVER' : 'TIME UP!', W / 2, H / 2 - 10);
+    g.fillStyle = '#0b7a43'; g.fillText(`HIDDEN IN THE POOL: ${shielded.toFixed(2)} ZEC`, W / 2, H / 2 + 6);
+    g.fillStyle = '#b42b30'; g.font = '8px "JetBrains Mono", monospace'; g.fillText(`LOST TO THE WATCHER: ${doxxed.toFixed(2)} ZEC`, W / 2, H / 2 + 20); g.textAlign = 'left';
     opts.onEnd({ shielded: +shielded.toFixed(2), doxxed: +doxxed.toFixed(2), best: state.best, isBest });
   }
   cv.focus({ preventScroll: true });
