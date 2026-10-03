@@ -16,6 +16,10 @@ export function h<K extends keyof HTMLElementTagNameMap>(
   return el;
 }
 
+/** Where the site lives, e.g. https://neromtoobad.github.io/glasstown */
+export const siteUrl = () => location.origin + import.meta.env.BASE_URL.replace(/\/$/, '');
+export const siteLabel = () => siteUrl().replace(/^https?:\/\//, '');
+
 export const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 export const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 

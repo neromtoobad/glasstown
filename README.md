@@ -1,6 +1,6 @@
 # GLASSTOWN · learn Zcash privacy
 
-**Learn to use Zcash privately, in about 10 minutes.**
+**Learn to use Zcash privately, in about 10 minutes.** Play it at **https://neromtoobad.github.io/glasstown/**
 
 Glasstown is a short, beginner-friendly learning game. It takes someone who knows nothing about Zcash to their **first private (shielded) payment**. Each level is a few cards: a character says one thing, you do one small action, then you continue. One level is a real arcade game.
 

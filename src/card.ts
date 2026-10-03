@@ -1,5 +1,6 @@
 import { drawIdentity, playerNumber } from './identity';
 import { state, elapsed } from './state';
+import { siteUrl, siteLabel } from './ui';
 
 const W = 1200, H = 675;
 const MONO = '"JetBrains Mono", ui-monospace, Menlo, monospace';
@@ -45,7 +46,7 @@ export async function drawCard(canvas: HTMLCanvasElement): Promise<void> {
 
   g.font = `600 16px ${SANS}`; g.fillStyle = '#5d6b63';
   g.fillText(`Zero to private in ${elapsed()}`, x, 576);
-  g.textAlign = 'right'; g.fillStyle = '#12a15a'; g.font = `700 16px ${MONO}`; g.fillText(location.host || 'glasstown', W - 72, 576); g.textAlign = 'left';
+  g.textAlign = 'right'; g.fillStyle = '#12a15a'; g.font = `700 16px ${MONO}`; g.fillText(siteLabel(), W - 72, 576); g.textAlign = 'left';
 }
 
 function rr(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
@@ -59,7 +60,7 @@ export function tweetUrl(): string {
     : 'I just learned how to use Zcash privately in about 10 minutes, with a game called Glasstown.\n\nEvery wallet is glass until you shield it:';
   const u = new URL('https://x.com/intent/post');
   u.searchParams.set('text', text + '\n');
-  u.searchParams.set('url', location.origin);
+  u.searchParams.set('url', siteUrl());
   u.searchParams.set('hashtags', 'Zcash,ZECATHON');
   return u.toString();
 }

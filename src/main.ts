@@ -6,7 +6,7 @@ import '@fontsource/jetbrains-mono/400.css';
 import '@fontsource/jetbrains-mono/700.css';
 import './style.css';
 
-import { h, btn, sfx, toggleMute, sleep, reduced } from './ui';
+import { h, btn, sfx, toggleMute, sleep, reduced, siteLabel } from './ui';
 import { state, complete, begin, reset } from './state';
 import { drawIdentity, identityLayers, playerNumber, paint, portraitGrid, PALS, castPortrait } from './identity';
 import { icon, confetti, LEVEL_ICONS } from './icons';
@@ -198,7 +198,7 @@ async function cardScreen() {
     h('p', { class: 'fine center' }, 'Tip: download the card, then add it to your post. It never shows your address, amount or transaction ID.'),
     h('div', { class: 'card in pass' },
       h('h2', {}, 'Pass it on'),
-      h('p', {}, 'Send a friend 0.001 ZEC with the note “learn at ', location.host, '”. The more people pay privately, the more private everyone is.')),
+      h('p', {}, 'Send a friend 0.001 ZEC with the note “learn at ', siteLabel(), '”. The more people pay privately, the more private everyone is.')),
     h('p', { class: 'center' }, h('button', { class: 'linkish', type: 'button', onclick: () => { if (confirm('Start over? This clears your progress.')) { reset(); location.hash = '#/'; } } }, 'Start over'))));
   await drawCard(cv);
   confetti(main.querySelector('.card-wrap') as HTMLElement, 60);
