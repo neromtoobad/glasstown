@@ -132,8 +132,8 @@ code, .mono { font-family: var(--mono); font-size: 0.86em; word-break: break-all
   position: sticky; top: 62px; z-index: 10; display: grid; grid-template-columns: 150px 1fr 150px; align-items: end; gap: 10px;
   padding: 8px 0 4px; margin: 0 -6px; background: linear-gradient(180deg, rgba(240,247,248,.96) 70%, rgba(240,247,248,0)); cursor: pointer;
 }
-.slot { height: 170px; display: flex; align-items: flex-end; justify-content: center; transition: opacity .25s, filter .25s; }
-.slot .char { max-height: 170px; max-width: 150px; object-fit: contain; filter: drop-shadow(0 8px 12px rgba(28,43,58,.2)); }
+.slot { height: 150px; display: flex; align-items: flex-end; justify-content: center; transition: opacity .25s, filter .25s; }
+.slot .char { max-height: 150px; max-width: 140px; object-fit: contain; filter: drop-shadow(0 8px 12px rgba(28,43,58,.2)); }
 .slot:not(.active) { opacity: .4; filter: grayscale(.35); }
 .slot.right .char { transform: scaleX(-1); }
 .char.enter { animation: pop-in .4s cubic-bezier(.2,.9,.3,1.4) both; }
@@ -158,6 +158,10 @@ code, .mono { font-family: var(--mono); font-size: 0.86em; word-break: break-all
 .bubble-foot { display: flex; justify-content: flex-end; margin-top: 6px; min-height: 36px; }
 .play { min-height: 30vh; }
 .dialog { scroll-margin-top: 64px; }
+.play > * { scroll-margin-top: 280px; }
+.play { padding-bottom: 42vh; }
+.dialog.idle ~ .play { padding-bottom: 0; }
+@media (max-width: 860px), (max-height: 640px) { .play > * { scroll-margin-top: 70px; } .play { padding-bottom: 12vh; } }
 .dialog.idle { position: static; }
 @media (max-height: 640px) { .dialog { position: static; } }
 

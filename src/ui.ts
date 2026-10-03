@@ -200,14 +200,14 @@ export function quiz(host: HTMLElement, qs: Q[]): Promise<void> {
       });
       box.querySelector('.qbody')?.remove();
       box.append(body);
-      box.scrollIntoView({ behavior: reduced() ? 'auto' : 'smooth', block: 'center' });
+      box.scrollIntoView({ behavior: reduced() ? 'auto' : 'smooth', block: 'start' });
     };
     render();
   });
 }
 
 export function scrollTo(el: HTMLElement): void {
-  el.scrollIntoView({ behavior: reduced() ? 'auto' : 'smooth', block: 'center' });
+  el.scrollIntoView({ behavior: reduced() ? 'auto' : 'smooth', block: 'start' });
 }
 
 // Random-looking strings for the simulated chain. Never real addresses.
